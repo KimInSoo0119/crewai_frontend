@@ -9,8 +9,8 @@ import {
 } from "@xyflow/react";
 import AgentNode from "../nodes/AgentNode";
 import TaskNode from "../nodes/TaskNode";
-import AgentSettingsPanel from "../panel/AgentSettingsPanel"
-import TaskSettingsPanel from "../panel/TaskSettingsPanel"
+import AgentSettingsPanel from "../panel/AgentSettingsPanel";
+import TaskSettingsPanel from "../panel/TaskSettingsPanel";
 import "@xyflow/react/dist/style.css";
 
 export default function FlowCanvas() {
@@ -54,7 +54,7 @@ export default function FlowCanvas() {
         id,
         type,
         position: { x: event.clientX - 100, y: event.clientY - 50 },
-        data: { label: type.charAt(0).toUpperCase() + type.slice(1), id: id },
+        data: { label: type.charAt(0).toUpperCase() + type.slice(1), id },
       };
       setNodes((nds) => nds.concat(newNode));
     },
@@ -83,7 +83,7 @@ export default function FlowCanvas() {
         </ReactFlow>
       </div>
 
-      {selectedNode && selectedNode.type === 'agent' && (
+      {selectedNode && selectedNode.type === "agent" && (
         <AgentSettingsPanel
           node={selectedNode}
           onChange={handleNodeChange}
@@ -91,7 +91,7 @@ export default function FlowCanvas() {
         />
       )}
 
-      {selectedNode && selectedNode.type === 'task' && (
+      {selectedNode && selectedNode.type === "task" && (
         <TaskSettingsPanel
           node={selectedNode}
           onChange={handleNodeChange}
@@ -102,10 +102,10 @@ export default function FlowCanvas() {
   );
 }
 
-const styles = { 
+const styles = {
   container: {
     width: "100%",
     height: "100vh",
-    display: "flex"
+    display: "flex",
   },
 };

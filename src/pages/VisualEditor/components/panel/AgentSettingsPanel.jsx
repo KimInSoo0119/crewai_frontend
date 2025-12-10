@@ -34,6 +34,16 @@ export default function NodeSettingsPanel({ node, onChange, onClose }) {
         onChange={(e) => setLabel(e.target.value)}
       />
 
+      <label style={styles.label}>Model</label>
+      <select
+        style={styles.select}
+        onChange={(e) => setModel(e.target.value)}
+      >
+        <option value="gpt-3.5">GPT-3.5</option>
+        <option value="gpt-4">GPT-4</option>
+        <option value="custom">Custom</option>
+      </select>
+
       <label style={styles.label}>Goal</label>
       <textarea
         style={styles.textarea}
@@ -65,7 +75,7 @@ const styles = {
     position: "fixed",
     right: 0,
     top: 0,
-    width: 280,
+    width: 500,
     height: "100vh",
     background: "#fff",
     padding: 20,
@@ -89,9 +99,19 @@ const styles = {
     marginBottom: 10,
     boxSizing: "border-box",
   },
+  select: {
+    width: "100%",
+    padding: "8px 8px",
+    borderRadius: 6,
+    border: "1px solid #ddd",
+    marginBottom: 10,
+    boxSizing: "border-box",
+    fontSize: 12,
+    fontFamily: "inherit",
+  },
   textarea: {
     width: "100%",
-    minHeight: 230,          
+    minHeight: 180,          
     padding: "8px 12px",
     borderRadius: 6,
     border: "1px solid #ddd",
@@ -105,7 +125,7 @@ const styles = {
     width: "100%",
     padding: "8px 0",
     marginBottom: 8,
-    background: "#4a90e2",
+    background: "black",
     color: "#fff",
     border: "none",
     borderRadius: 6,

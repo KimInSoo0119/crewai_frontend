@@ -1,19 +1,13 @@
 import { useState } from "react";
 import { Sidebar as ProSidebar, Menu, MenuItem, SubMenu } from "react-pro-sidebar";
+import ExecutionPopup from "../popup/ExecutionPopup";
 
 export default function Sidebar({ collapsed, onToggle }) {
-  const [llmConnections, setLlmConnections] = useState([
-    { id: 1, name: "OpenAI GPT-4" },
-    { id: 2, name: "Cohere LLM" },
-  ]);
-  const [selectedConnection, setSelectedConnection] = useState(null);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
 
   const handleExecute = () => {
-    if (!selectedConnection) {
-      alert("LLM Connection을 선택해주세요!");
-      return;
-    }
-    alert(`Execute 버튼 클릭됨! 사용된 LLM: ${selectedConnection.name}`);
+    alert('실행'); 
+    setIsPopupOpen(true);
   };
 
   const onDragStart = (e, type) => {
@@ -37,8 +31,6 @@ export default function Sidebar({ collapsed, onToggle }) {
               style={styles.menuItem}
               draggable
               onDragStart={(e) => onDragStart(e, "agent")}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f0f0f0")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#fff")}
             >
               Agent
             </MenuItem>
@@ -46,28 +38,9 @@ export default function Sidebar({ collapsed, onToggle }) {
               style={styles.menuItem}
               draggable
               onDragStart={(e) => onDragStart(e, "task")}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f0f0f0")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#fff")}
             >
               Task
             </MenuItem>
-          </SubMenu>
-
-          <SubMenu label="LLM" style={styles.subMenuLabel}>
-            {llmConnections.map((conn) => (
-              <MenuItem
-                key={conn.id}
-                style={{
-                  ...styles.menuItem,
-                  fontWeight: selectedConnection?.id === conn.id ? "bold" : "normal",
-                }}
-                onClick={() => setSelectedConnection(conn)}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f0f0f0")}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#fff")}
-              >
-                {conn.name}
-              </MenuItem>
-            ))}
           </SubMenu>
         </Menu>
 
@@ -75,8 +48,6 @@ export default function Sidebar({ collapsed, onToggle }) {
           <button
             style={styles.executeButton}
             onClick={handleExecute}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f0f0f0")}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#fff")}
           >
             Execute
           </button>
@@ -86,6 +57,13 @@ export default function Sidebar({ collapsed, onToggle }) {
       <button onClick={onToggle} style={styles.toggleButton}>
         {collapsed ? "→" : "←"}
       </button>
+      
+      <ExecutionPopup
+        isOpen={isPopupOpen}
+        onClose={() => setIsPopupOpen(false)}
+        event={"agent->task"}
+        result={"이것은 실행 결과 입니다.\nLLM Output..."}
+      />
     </div>
   );
 }
@@ -108,14 +86,15 @@ const styles = {
     boxShadow: "5px 0 5px rgba(0,0,0,0.1)",
     display: "flex",
     flexDirection: "column",
+    position: "relative",
   },
   header: {
     fontWeight: "bold",
-    fontSize: 15,
+    fontSize: 17,
     marginBottom: 20,
   },
   subMenuLabel: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "bold",
   },
   menuItem: {
@@ -124,27 +103,29 @@ const styles = {
     border: "1px solid #ddd", 
     marginBottom: 6,
     cursor: "pointer",
-    fontSize: 12,
+    fontSize: 14,
     backgroundColor: "#fff",
-    transition: "background 0.2s",
   },
   footer: {
-    marginTop: "auto",
+    position: "absolute", 
+    bottom: 16,          
+    left: 16,
+    right: 16,
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "column"
   },
   executeButton: {
     width: "100%",
-    padding: "8px 0",
+    padding: "10px 0",
+    marginBottom: "30px",
     border: "none",
     borderRadius: 6,
-    backgroundColor: "#fff",
-    color: "#333",
-    fontWeight: "bold",
-    fontSize: 14,
+    backgroundColor: "black",
+    color: "#fff",
+    fontSize: 13,
     cursor: "pointer",
     boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-    transition: "all 0.2s",
+    transition: "background-color 0.2s",
   },
   toggleButton: {
     position: "absolute",

@@ -40,7 +40,7 @@ const styles = {
     borderRadius: 6,
     border: "none",
     cursor: "pointer",
-    background: "#4a90e2",
+    background: "black",
     color: "#fff",
     fontWeight: 300,
     fontSize: 9,

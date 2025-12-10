@@ -1,16 +1,16 @@
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 export default function CreateProjectPage() {
   const navigate = useNavigate();
-
-  const projects = [
+  const [projects, setProjects] = useState([
     { id: 1, name: "Insoft project 1" },
     { id: 2, name: "Insoft project 2" },
-    { id: 3, name: "Insoft project 3" }
-  ];
+    { id: 3, name: "Insoft project 3" },
+  ]);
 
   const handleCreateProject = () => {
-    navigate("/editor"); 
+    navigate("/editor");
   };
 
   const openProject = (id) => {
@@ -19,13 +19,19 @@ export default function CreateProjectPage() {
 
   return (
     <div style={styles.pageContainer}>
-      <h1 style={styles.header}>Projects</h1>
+      <h2 style={styles.header}>Recent Projects</h2>
 
       <button
         onClick={handleCreateProject}
         style={styles.createButton}
-        onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.05)"}
-        onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = "#222";
+          e.currentTarget.style.borderColor = "#555";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = "black";
+          e.currentTarget.style.borderColor = "#333";
+        }}
       >
         + Create New Project
       </button>
@@ -35,15 +41,27 @@ export default function CreateProjectPage() {
           <div
             key={project.id}
             style={styles.projectCard}
-            onMouseEnter={(e) => e.currentTarget.style.boxShadow = "0 4px 10px rgba(0,0,0,0.1)"}
-            onMouseLeave={(e) => e.currentTarget.style.boxShadow = "none"}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,0.1)";
+            }}
           >
             <span style={styles.projectName}>{project.name}</span>
             <button
-              onClick={() => openProject(project.id)}
               style={styles.openButton}
-              onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.05)"}
-              onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+              onClick={() => openProject(project.id)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#222";
+                e.currentTarget.style.borderColor = "#555";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "black";
+                e.currentTarget.style.borderColor = "#333";
+              }}
             >
               Open
             </button>
@@ -56,22 +74,26 @@ export default function CreateProjectPage() {
 
 const styles = {
   pageContainer: {
-    padding: "40px",
+    padding: "100px",
     maxWidth: "800px",
     margin: "0 auto",
+    fontFamily: "'Segoe UI', Roboto, sans-serif",
   },
   header: {
     marginBottom: "30px",
+    fontWeight: "500",
+    fontSize: "1.7rem",
   },
   createButton: {
     padding: "12px 24px",
     marginBottom: "40px",
     cursor: "pointer",
-    fontSize: "16px",
+    fontSize: "14px",
+    fontWeight: "500",
     borderRadius: "8px",
-    border: "1px solid #999",
-    background: "transparent",
-    alignSelf: "flex-start",
+    border: "2px solid #333",
+    background: "black",
+    color: "white",
     transition: "all 0.2s",
   },
   projectList: {
@@ -81,13 +103,14 @@ const styles = {
   },
   projectCard: {
     padding: "20px",
-    border: "1px solid #ccc",
     borderRadius: "10px",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    transition: "all 0.2s",
-    cursor: "pointer",
+    transition: "transform 0.15s, box-shadow 0.15s",
+    border: "2px solid #bbb",
+    background: "#fff",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
   },
   projectName: {
     fontSize: "16px",
@@ -96,9 +119,11 @@ const styles = {
   openButton: {
     padding: "8px 16px",
     borderRadius: "6px",
-    border: "1px solid #999",
-    background: "transparent",
+    border: "2px solid #333",
+    background: "black",
+    color: "white",
     cursor: "pointer",
+    fontWeight: "500",
     transition: "all 0.2s",
   },
 };
