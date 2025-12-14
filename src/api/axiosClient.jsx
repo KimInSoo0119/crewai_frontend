@@ -1,7 +1,9 @@
 import axios from "axios";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const axiosClient = axios.create({
-  baseURL: process.env.API_URL,
+  baseURL: API_URL,
   timeout: 7000, 
   headers: {
     "Content-Type": "application/json",
@@ -17,3 +19,4 @@ axiosClient.interceptors.response.use(
 );
 
 export default axiosClient;
+2
