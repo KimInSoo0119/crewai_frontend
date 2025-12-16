@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 
+// Agent setting 작업 진행중
 export default function NodeSettingsPanel({ node, onChange, onClose }) {
   const [label, setLabel] = useState("");
+  const [model, setModel] = useState("");
+  const [modelOptions, setModelOptions] = useState([]);
   const [goal, setGoal] = useState("");
   const [backstory, setBackstroy] = useState("");
 

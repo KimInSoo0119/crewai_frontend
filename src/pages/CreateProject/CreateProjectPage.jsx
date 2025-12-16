@@ -1,13 +1,23 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axiosClient from "../../api/axiosClient";
 
 export default function CreateProjectPage() {
   const navigate = useNavigate();
-  const [projects, setProjects] = useState([
-    { id: 1, name: "Insoft project 1" },
-    { id: 2, name: "Insoft project 2" },
-    { id: 3, name: "Insoft project 3" },
-  ]);
+  const [projects, setProjects] = useState([]);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const res = await axiosClient.get("/api/v1/crew/list");
+        setProjects(res.data); 
+      } catch (error) {
+        console.error("Failed to fetch projects:", error);
+      }
+    };
+
+    fetchProjects();
+  }, []);
 
   const handleCreateProject = () => {
     navigate("/editor");
@@ -50,7 +60,7 @@ export default function CreateProjectPage() {
               e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,0.1)";
             }}
           >
-            <span style={styles.projectName}>{project.name}</span>
+            <span style={styles.projectName}>{project.title}</span>
             <button
               style={styles.openButton}
               onClick={() => openProject(project.id)}

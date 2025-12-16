@@ -1,30 +1,72 @@
-import { useState } from "react";
-
-const PROVIDER_OPTIONS = [
-  { value: "custom-openai-compatible", label: "Custom OpenAI Compatible" }
-];
+import { useState, useEffect } from "react";
+import axiosClient from "../../api/axiosClient";
 
 export default function LLMConnectionsPage() {
   const [connectionName, setConnectionName] = useState("");
-  const [provider, setProvider] = useState();
+  const [provider, setProvider] = useState("");
+  const [providerOptions, setProviderOptions] = useState([]);
   const [envVars, setEnvVars] = useState([
-    { key: "", value: "" },
-    { key: "OPENAI_API_KEY", value: "" },
-    { key: "OPENAI_API_BASE", value: "" },
+    { id: crypto.randomUUID(), key: "OPENAI_API_KEY", value: "" },
+    { id: crypto.randomUUID(), key: "OPENAI_API_BASE", value: "" },
   ]);
 
+  useEffect(() => {
+    const fetchProviders = async () => {
+      try {
+        const res = await axiosClient.get("/api/v1/llm/provider/list");
+        setProviderOptions(res.data);
+      } catch (error) {
+        console.error("Failed to fetch provider options:", error);
+      }
+    };
+    fetchProviders();
+  }, []);
+
   const addVariable = () => {
-    setEnvVars([...envVars, { key: "", value: "" }]);
+    setEnvVars([...envVars, { id: crypto.randomUUID(), key: "", value: "" }]);
   };
 
-  const updateEnvVar = (index, field, value) => {
-    const newEnvVars = [...envVars];
-    newEnvVars[index][field] = value;
-    setEnvVars(newEnvVars);
+  const updateEnvVar = (id, field, value) => {
+    setEnvVars(envVars.map(v => v.id === id ? { ...v, [field]: value } : v));
   };
 
-  const removeEnvVar = (index) => {
-    setEnvVars(envVars.filter((_, i) => i !== index));
+  const removeEnvVar = (id) => {
+    setEnvVars(envVars.filter(v => v.id !== id));
+  };
+
+  const handleAddConnection = async () => {
+    try {
+
+      const apiKey = envVars.find(v => v.key === "OPENAI_API_KEY")?.value || "";
+      const apiBase = envVars.find(v => v.key === "OPENAI_API_BASE")?.value || "";
+
+      if (!connectionName || !provider || !apiKey || !apiBase) {
+        alert("Please fill all fields!");
+        return;
+      }
+
+      const params = {
+        name: connectionName,
+        provider: provider,
+        api_key: apiKey,
+        api_base: apiBase,
+      };
+
+      const response = await axiosClient.post("/api/v1/llm/connection", params);
+      console.log("Connection added:", response);
+
+      setConnectionName("");
+      setProvider("");
+      setEnvVars([
+        { id: crypto.randomUUID(), key: "OPENAI_API_KEY", value: "" },
+        { id: crypto.randomUUID(), key: "OPENAI_API_BASE", value: "" },
+      ]);
+
+      alert("Connection added successfully!");
+    } catch (error) {
+      console.error("Failed to add connection:", error);
+      alert("Failed to add connection. Check console for details.");
+    }
   };
 
   return (
@@ -50,8 +92,9 @@ export default function LLMConnectionsPage() {
             onChange={(e) => setProvider(e.target.value)}
             style={styles.select}
           >
-            {PROVIDER_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
+            <option value="">Select Provider</option>
+            {providerOptions.map((opt) => (
+              <option key={opt.id} value={opt.label}>
                 {opt.label}
               </option>
             ))}
@@ -63,22 +106,22 @@ export default function LLMConnectionsPage() {
             The following environment variables are required: OPENAI_API_KEY, OPENAI_API_BASE
           </div>
 
-          {envVars.map((envVar, idx) => (
-            <div key={idx} style={styles.envVarRow}>
+          {envVars.map((envVar) => (
+            <div key={envVar.id} style={styles.envVarRow}>
               <input
                 placeholder="ENV_VAR_KEY"
                 value={envVar.key}
-                onChange={(e) => updateEnvVar(idx, "key", e.target.value)}
+                onChange={(e) => updateEnvVar(envVar.id, "key", e.target.value)}
                 style={{ ...styles.input, flex: 2, marginRight: 8 }}
               />
               <input
                 placeholder="env-var-value"
                 value={envVar.value}
-                onChange={(e) => updateEnvVar(idx, "value", e.target.value)}
+                onChange={(e) => updateEnvVar(envVar.id, "value", e.target.value)}
                 style={{ ...styles.input, flex: 3, marginRight: 8 }}
               />
               <button
-                onClick={() => removeEnvVar(idx)}
+                onClick={() => removeEnvVar(envVar.id)}
                 style={styles.removeButton}
                 aria-label="Remove variable"
               >
@@ -92,24 +135,22 @@ export default function LLMConnectionsPage() {
         </div>
 
         <div style={styles.infoBox}>
-          <p>
-            <b>Important setup information:</b>
-          </p>
+          <p><b>Important setup information:</b></p>
           <ul>
             <li>
-              For <code>OPENAI_API_BASE</code>, include the full base URL with <code>/v1</code> at the end (e.g.,{" "}
-              <code>https://api.your-service.com/v1</code>)
+              For <code>OPENAI_API_BASE</code>, include the full base URL with <code>/v1</code> at the end
             </li>
             <li>
-              For <code>OPENAI_API_KEY</code>, provide the API key that will be sent in the Authorization header as{" "}
-              <code>Bearer YOUR_API_KEY</code>
+              For <code>OPENAI_API_KEY</code>, provide the API key that will be sent in the Authorization header
             </li>
             <li>Use the "Fetch Available Models" button to verify your connection settings</li>
           </ul>
         </div>
 
         <div style={{ textAlign: "right" }}>
-          <button style={styles.submitButton}>Add Connection</button>
+          <button style={styles.submitButton} onClick={handleAddConnection}>
+            Add Connection
+          </button>
         </div>
       </div>
     </div>
