@@ -1,12 +1,24 @@
 import { useState, useEffect } from "react";
+import axiosClient from "../../../../api/axiosClient";
 
-// Agent setting 작업 진행중
 export default function NodeSettingsPanel({ node, onChange, onClose }) {
   const [label, setLabel] = useState("");
   const [model, setModel] = useState("");
   const [modelOptions, setModelOptions] = useState([]);
   const [goal, setGoal] = useState("");
   const [backstory, setBackstroy] = useState("");
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const res = await axiosClient.get("/api/v1/llm/list");
+        setModelOptions(res.data);
+      } catch (error) {
+        console.error("Failed to fetch provider options:", error);
+      }
+    };
+    fetchModels();
+  }, []);
 
   useEffect(() => {
     if (node) setLabel(node.data.label || "");
@@ -37,14 +49,19 @@ export default function NodeSettingsPanel({ node, onChange, onClose }) {
         onChange={(e) => setLabel(e.target.value)}
       />
 
+      {/* {select 옵션 안나오는 문제} */}
       <label style={styles.label}>Model</label>
       <select
-        style={styles.select}
+        value={model}
         onChange={(e) => setModel(e.target.value)}
+        style={styles.select}
       >
-        <option value="gpt-3.5">GPT-3.5</option>
-        <option value="gpt-4">GPT-4</option>
-        <option value="custom">Custom</option>
+        <option value="">Select Model</option>
+        {modelOptions.map((opt) => {
+          <option key={opt.id} value={opt.name}>
+            {opt.name}
+          </option>
+        })}
       </select>
 
       <label style={styles.label}>Goal</label>
