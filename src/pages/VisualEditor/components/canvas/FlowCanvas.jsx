@@ -1,7 +1,7 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   ReactFlow,
-  MiniMap,
+  useReactFlow,
   Background,
   useNodesState,
   useEdgesState,
@@ -13,11 +13,28 @@ import AgentSettingsPanel from "../panel/AgentSettingsPanel";
 import TaskSettingsPanel from "../panel/TaskSettingsPanel";
 import "@xyflow/react/dist/style.css";
 
-export default function FlowCanvas() {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+export default function FlowCanvas({ setFlowData, initialFlow }) {
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialFlow?.nodes || []);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialFlow?.edges || []);
   const [selectedNode, setSelectedNode] = useState(null);
 
+  const { screenToFlowPosition } = useReactFlow();
+
+  useEffect(() => {
+    if (initialFlow) {
+      setNodes(initialFlow.nodes || []);
+      setEdges(initialFlow.edges || []);
+    }
+  }, [initialFlow])
+
+  // 내부 상태를 부모와 동기화하기 위한 useEffect
+  useEffect(() => {
+    if (setFlowData) {
+      setFlowData({ nodes, edges });
+    }
+  }, [nodes, edges, setFlowData]);
+
+  // 노드 클릭 시 설정 패널 열기
   const openSettings = useCallback(
     (nodeId) => {
       const node = nodes.find((n) => n.id === nodeId);
@@ -26,6 +43,7 @@ export default function FlowCanvas() {
     [nodes]
   );
 
+  // 노드 타입 정의
   const nodeTypes = useMemo(
     () => ({
       agent: (props) => <AgentNode {...props} onOpenSettings={openSettings} />,
@@ -34,31 +52,46 @@ export default function FlowCanvas() {
     [openSettings]
   );
 
-  const handleNodeChange = (updatedNode) => {
-    setNodes((nds) =>
-      nds.map((n) => (n.id === updatedNode.id ? updatedNode : n))
-    );
-    setSelectedNode(null);
-  };
+  // 노드 수정 시
+  const handleNodeChange = useCallback(
+    (updatedNode) => {
+      setNodes((nds) =>
+        nds.map((n) => (n.id === updatedNode.id ? updatedNode : n))
+      );
+      setSelectedNode(null);
+    },
+    [setNodes]
+  );
 
-  const handleConnect = (params) => setEdges((eds) => addEdge(params, eds));
+  // 노드 연결
+  const handleConnect = useCallback(
+    (params) => setEdges((eds) => addEdge(params, eds)),
+    [setEdges]
+  );
 
+  // 드래그앤드롭으로 새 노드 추가
   const onDrop = useCallback(
     (event) => {
       event.preventDefault();
       const type = event.dataTransfer.getData("application/reactflow");
       if (!type) return;
 
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+
       const id = `${type}-${Date.now()}`;
       const newNode = {
         id,
         type,
-        position: { x: event.clientX - 100, y: event.clientY - 50 },
+        position,
         data: { label: type.charAt(0).toUpperCase() + type.slice(1), id },
       };
+
       setNodes((nds) => nds.concat(newNode));
     },
-    [setNodes]
+    [screenToFlowPosition, setNodes]
   );
 
   const onDragOver = (event) => {
@@ -76,9 +109,7 @@ export default function FlowCanvas() {
           onEdgesChange={onEdgesChange}
           onConnect={handleConnect}
           nodeTypes={nodeTypes}
-          fitView
         >
-          <MiniMap />
           <Background />
         </ReactFlow>
       </div>

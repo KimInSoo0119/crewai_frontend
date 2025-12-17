@@ -1,10 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axiosClient from "../../api/axiosClient";
+import CreateProjectPopup from "./popup/CreateProjectPopup";
 
 export default function CreateProjectPage() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -19,12 +21,20 @@ export default function CreateProjectPage() {
     fetchProjects();
   }, []);
 
-  const handleCreateProject = () => {
-    navigate("/editor");
+  const handleCreateProject = async (title) => {
+    try {
+      const params = { title: title }
+      const res = await axiosClient.post("/api/v1/crew/create", params);
+      const projectId = res.data.id;
+      setIsModalOpen(false);
+      navigate(`/editor?project_id=${projectId}`);
+    } catch (error) {
+      console.log("Failed to create projects:", error);
+    }
   };
 
   const openProject = (id) => {
-    navigate(`/editor?id=${id}`);
+    navigate(`/editor?project_id=${id}`);
   };
 
   return (
@@ -32,7 +42,7 @@ export default function CreateProjectPage() {
       <h2 style={styles.header}>Recent Projects</h2>
 
       <button
-        onClick={handleCreateProject}
+        onClick={() => setIsModalOpen(true)}
         style={styles.createButton}
         onMouseEnter={(e) => {
           e.currentTarget.style.background = "#222";
@@ -78,6 +88,12 @@ export default function CreateProjectPage() {
           </div>
         ))}
       </div>
+
+      <CreateProjectPopup
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onCreate={(title) => handleCreateProject(title)}
+      />
     </div>
   );
 }

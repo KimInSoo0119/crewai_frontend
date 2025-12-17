@@ -49,7 +49,6 @@ export default function NodeSettingsPanel({ node, onChange, onClose }) {
         onChange={(e) => setLabel(e.target.value)}
       />
 
-      {/* {select 옵션 안나오는 문제} */}
       <label style={styles.label}>Model</label>
       <select
         value={model}
@@ -57,11 +56,11 @@ export default function NodeSettingsPanel({ node, onChange, onClose }) {
         style={styles.select}
       >
         <option value="">Select Model</option>
-        {modelOptions.map((opt) => {
+        {modelOptions.map((opt) => (
           <option key={opt.id} value={opt.name}>
             {opt.name}
           </option>
-        })}
+        ))}
       </select>
 
       <label style={styles.label}>Goal</label>

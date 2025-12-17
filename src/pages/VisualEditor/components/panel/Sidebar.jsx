@@ -1,13 +1,65 @@
 import { useState } from "react";
 import { Sidebar as ProSidebar, Menu, MenuItem, SubMenu } from "react-pro-sidebar";
+import { useSearchParams } from "react-router-dom";
 import ExecutionPopup from "../popup/ExecutionPopup";
+import axiosClient from "../../../../api/axiosClient";
 
-export default function Sidebar({ collapsed, onToggle }) {
+export default function Sidebar({ collapsed, onToggle, flowData }) {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [searchParams] = useSearchParams();
+  const projectId = searchParams.get("project_id");
 
-  const handleExecute = () => {
-    alert('실행'); 
-    setIsPopupOpen(true);
+  const buildExecuteFlowParams = (nodes, edges, projectId) => {
+    const formattedNodes = nodes.map(node => ({
+      id: String(node.id),                    
+      dbId: node.dbId ?? null,                
+      type: String(node.type),
+      position: {
+        x: node.position?.x ?? 0,            
+        y: node.position?.y ?? 0
+      },
+      data: {
+        label: node.data?.label ?? "",       
+      }
+    }));
+
+    const formattedEdges = edges.map(edge => ({
+      id: String(edge.id),
+      dbId: edge.dbId ?? null,
+      source: String(edge.source),
+      target: String(edge.target)
+    }));
+
+    return {
+      project_id: Number(projectId),  // 반드시 int
+      nodes: formattedNodes,
+      edges: formattedEdges
+    };
+  }
+
+  const handleExecute = async () => {
+    if (!projectId) {
+      alert("project_id가 없습니다.");
+      return;
+    }
+
+    if (!flowData?.nodes || !flowData?.edges) {
+      alert("실행할 플로우가 없습니다.");
+      return;
+    }
+
+    try {
+      const params = buildExecuteFlowParams(flowData.nodes, flowData.edges, projectId)
+      const res = await axiosClient.post(
+        "/api/v1/crew/flow/execute",
+        params
+      );
+
+      setIsPopupOpen(true);
+    } catch (error) {
+      console.error("Failed to execute flow:", error);
+      alert("실행 중 오류가 발생했습니다.");
+    }
   };
 
   const onDragStart = (e, type) => {
