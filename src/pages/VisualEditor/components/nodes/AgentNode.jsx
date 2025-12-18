@@ -6,8 +6,13 @@ export default function AgentNode({ data }) {
       <div style={styles.title}>{data.role}</div>
       {/* <div>{data.backstory}</div>
       <div>{data.role}</div> */}
-
-      <Handle type="source" position={Position.Bottom} style={styles.handle} />
+      {/* 아래쪽: 출력(source) - task의 위쪽(target)과만 연결 */}
+      <Handle
+        id="agent-bottom"
+        type="source"
+        position={Position.Bottom}
+        style={styles.handle}
+      />
     </div>
   );
 }

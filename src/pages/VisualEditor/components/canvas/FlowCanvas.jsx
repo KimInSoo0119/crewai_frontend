@@ -70,8 +70,56 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
   }, []);
 
   const handleConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
+    (params) => {
+      const sourceNode = nodes.find(
+        (n) => String(n.id) === String(params.source)
+      );
+      const targetNode = nodes.find(
+        (n) => String(n.id) === String(params.target)
+      );
+
+      if (!sourceNode || !targetNode) {
+        return;
+      }
+
+      const { sourceHandle, targetHandle } = params;
+
+      // 1) Agent 규칙
+      if (sourceNode.type === "agent") {
+        // Agent는 Task 위쪽 점(task-top)으로만 연결
+        if (targetNode.type !== "task" || targetHandle !== "task-top") {
+          alert("Agent는 Task의 위쪽 점과만 연결할 수 있습니다.");
+          return;
+        }
+      }
+
+      // 2) Task 규칙
+      if (sourceNode.type === "task") {
+        // Task 위쪽 점에서는 시작 불가
+        if (sourceHandle === "task-top") {
+          alert("Task의 위쪽 점에서는 연결을 시작할 수 없습니다.");
+          return;
+        }
+
+        if (targetNode.type === "agent") {
+          // Task -> Agent 금지
+          alert("Task는 Agent와 연결할 수 없습니다. (Agent -> Task만 가능)");
+          return;
+        }
+
+        if (targetNode.type === "task") {
+          // Task -> Task 는 오른쪽(source: task-right) -> 왼쪽(target: task-left)만 허용
+          if (!(sourceHandle === "task-right" && targetHandle === "task-left")) {
+            alert("Task 간에는 오른쪽 점에서 왼쪽 점으로만 연결할 수 있습니다.");
+            return;
+          }
+        }
+      }
+
+      // 위 조건을 모두 통과하면 엣지 생성
+      setEdges((eds) => addEdge(params, eds));
+    },
+    [nodes, setEdges]
   );
 
   const onDrop = useCallback(
