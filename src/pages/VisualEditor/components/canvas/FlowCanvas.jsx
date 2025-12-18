@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   ReactFlow,
@@ -29,12 +29,30 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("project_id");
 
+  // initialFlow로부터의 초기 세팅은 한 번만 수행하고,
+  // 이후에는 FlowCanvas 내부 상태를 단일 source of truth로 유지
+  const initializedRef = useRef(false);
+
   useEffect(() => {
-    if (initialFlow) {
+    // 조회 API가 완료되어 실제 노드/엣지가 넘어왔을 때 한 번만 초기화
+    const hasInitialData =
+      initialFlow &&
+      ((Array.isArray(initialFlow.nodes) && initialFlow.nodes.length > 0) ||
+        (Array.isArray(initialFlow.edges) && initialFlow.edges.length > 0));
+
+    if (!initializedRef.current && hasInitialData) {
       setNodes(initialFlow.nodes || []);
       setEdges(initialFlow.edges || []);
+      initializedRef.current = true;
     }
   }, [initialFlow, setNodes, setEdges]);
+
+  // 노드 / 엣지 상태가 변경될 때마다 부모의 flowData를 최신 화면 기준으로 동기화
+  useEffect(() => {
+    if (typeof setFlowData === "function") {
+      setFlowData({ nodes, edges });
+    }
+  }, [nodes, edges, setFlowData]);
 
   const refreshFlow = useCallback(async () => {
     try {
