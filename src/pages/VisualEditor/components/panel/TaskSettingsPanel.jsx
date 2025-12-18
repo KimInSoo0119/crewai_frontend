@@ -1,26 +1,60 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import axiosClient from "../../../../api/axiosClient";
 
-export default function NodeSettingsPanel({ node, onChange, onClose }) {
-  const [label, setLabel] = useState("");
+export default function TaskSettingsPanel({node, fetchSettings, onSaved, onClose,}) {
+  const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [output, setOutput] = useState("");
+  const [expectedOutput, setExpectedOutput] = useState("");
+  const [searchParams] = useSearchParams();
+  const projectId = searchParams.get("project_id");
 
   useEffect(() => {
-    if (node) setLabel(node.data.label || "");
-  }, [node?.id, node?.data.label]);
+    if (!node) return;
+    if (fetchSettings && node.dbId) {
+      const fetchTaskSettings = async () => {
+        try {
+          const res = await axiosClient.get(
+            `/api/v1/tasks/projects/${projectId}/tasks/${node.dbId}`
+          );
+          const task = res.data?.[0];
+          if (!task) return;
+
+          setName(task.name ?? "");
+          setDescription(task.description ?? "");
+          setExpectedOutput(task.expected_output ?? "");
+        } catch (err) {
+          console.error(err);
+        }
+      };
+
+      fetchTaskSettings();
+    } else {
+      setName("");
+      setDescription("");
+      setExpectedOutput("");
+    }
+  }, [node, fetchSettings, projectId]);
 
   if (!node) return null;
 
-  const handleSave = () => {
-    const updatedNode = {
-      ...node,
-      data: {
-        ...node.data,
-        label,
-      },
+  const handleSave = async () => {
+    const params = {
+      id: node.dbId,
+      project_id: Number(projectId),
+      agent_id: node.agent_id,
+      name: name,
+      description: description,
+      expected_output: expectedOutput,
     };
-    onChange(updatedNode);
-    onClose();
+
+    try {
+      await axiosClient.post("/api/v1/tasks/save", params);
+      await onSaved();
+      onClose();
+    } catch (err) {
+      console.error("Task save failed", err);
+    }
   };
 
   return (
@@ -30,8 +64,8 @@ export default function NodeSettingsPanel({ node, onChange, onClose }) {
       <label style={styles.label}>Name</label>
       <input
         style={styles.input}
-        value={label}
-        onChange={(e) => setLabel(e.target.value)}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
       />
 
       <label style={styles.label}>Description</label>
@@ -45,8 +79,8 @@ export default function NodeSettingsPanel({ node, onChange, onClose }) {
       <label style={styles.label}>Expected Output</label>
       <textarea
         style={styles.textarea}
-        value={output}
-        onChange={(e) => setOutput(e.target.value)}
+        value={expectedOutput}
+        onChange={(e) => setExpectedOutput(e.target.value)}
         placeholder="Enter expected output"
       />
 
@@ -76,14 +110,14 @@ const styles = {
     marginBottom: 20,
     fontWeight: "bold",
   },
-  label: { 
-    fontSize: 12, 
-    marginBottom: 6, 
-    display: "block" 
+  label: {
+    fontSize: 12,
+    marginBottom: 6,
+    display: "block",
   },
   input: {
     width: "100%",
-    padding: "8px 12px", 
+    padding: "8px 12px",
     borderRadius: 6,
     border: "1px solid #ddd",
     marginBottom: 10,
@@ -91,12 +125,12 @@ const styles = {
   },
   textarea: {
     width: "100%",
-    minHeight: 180,          
+    minHeight: 180,
     padding: "8px 12px",
     borderRadius: 6,
     border: "1px solid #ddd",
     marginBottom: 10,
-    resize: "vertical",      
+    resize: "vertical",
     boxSizing: "border-box",
     fontFamily: "inherit",
     fontSize: 12,

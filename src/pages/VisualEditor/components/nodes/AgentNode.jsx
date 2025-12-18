@@ -1,13 +1,11 @@
 import { Handle, Position } from "@xyflow/react";
 
-export default function AgentNode({ data, onOpenSettings }) {
-    return (
+export default function AgentNode({ data }) {
+  return (
     <div style={styles.container}>
-      <div style={styles.title}>{data.label}</div>
-
-      <button style={styles.button} onClick={() => onOpenSettings(data.id)}>
-        ⚙ 설정
-      </button>
+      <div style={styles.title}>{data.role}</div>
+      {/* <div>{data.backstory}</div>
+      <div>{data.role}</div> */}
 
       <Handle type="source" position={Position.Bottom} style={styles.handle} />
     </div>
@@ -32,19 +30,6 @@ const styles = {
     fontWeight: 600,
     fontSize: 14,
     marginBottom: 6,
-  },
-  button: {
-    alignSelf: "flex-end",
-    width: "30%",
-    padding: "6px 10px",
-    borderRadius: 6,
-    border: "none",
-    cursor: "pointer",
-    background: "black",
-    color: "#fff",
-    fontWeight: 300,
-    fontSize: 9,
-    transition: "all 0.2s",
   },
   handle: {
     width: 5,

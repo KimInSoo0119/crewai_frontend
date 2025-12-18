@@ -1,15 +1,12 @@
 import { Handle, Position } from "@xyflow/react";
 
-export default function TaskNode({ data, onOpenSettings }) {
+export default function TaskNode({ data }) {
   return (
     <div style={styles.container}>
-      <div style={styles.title}>{data.label}</div>
-
-      <button style={styles.button} onClick={() => onOpenSettings(data.id)}>
-        ⚙ 설정
-      </button>
-
-      <Handle type="target" position={Position.Top} style={styles.handle} />
+      <div style={styles.title}>{data.name}</div>
+      {/* <div>{data.description}</div>
+      <div>{data.expected_output}</div> */}
+    
       <Handle type="source" position={Position.Bottom} style={styles.handle} />
     </div>
   );
@@ -33,19 +30,6 @@ const styles = {
     fontWeight: 600,
     fontSize: 14,
     marginBottom: 6,
-  },
-  button: {
-    alignSelf: "flex-end",
-    width: "30%",
-    padding: "6px 10px",
-    borderRadius: 6,
-    border: "none",
-    cursor: "pointer",
-    background: "black",
-    color: "#fff",
-    fontWeight: 300,
-    fontSize: 9,
-    transition: "all 0.2s",
   },
   handle: {
     width: 5,

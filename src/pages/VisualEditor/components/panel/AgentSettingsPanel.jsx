@@ -1,41 +1,79 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import axiosClient from "../../../../api/axiosClient";
 
-export default function NodeSettingsPanel({ node, onChange, onClose }) {
-  const [label, setLabel] = useState("");
-  const [model, setModel] = useState("");
-  const [modelOptions, setModelOptions] = useState([]);
+export default function AgentSettingsPanel({node, fetchSettings, onSaved, onClose,}) {
+  const [role, setRole] = useState("");
   const [goal, setGoal] = useState("");
-  const [backstory, setBackstroy] = useState("");
+  const [backstory, setBackstory] = useState("");
+  const [modelId, setModelId] = useState("");
+  const [modelOptions, setModelOptions] = useState([]);
+  const [searchParams] = useSearchParams();
+  const projectId = searchParams.get("project_id");
 
   useEffect(() => {
     const fetchModels = async () => {
       try {
         const res = await axiosClient.get("/api/v1/llm/list");
-        setModelOptions(res.data);
-      } catch (error) {
-        console.error("Failed to fetch provider options:", error);
+        setModelOptions(res.data || []);
+      } catch (err) {
+        console.error(err);
       }
     };
+
     fetchModels();
   }, []);
 
   useEffect(() => {
-    if (node) setLabel(node.data.label || "");
-  }, [node?.id, node?.data.label]);
+    if (!node) return;
+    if (fetchSettings && node.dbId) {
+      const fetchAgentSettings = async () => {
+        try {
+          const res = await axiosClient.get(
+            `/api/v1/agents/projects/${projectId}/agents/${node.dbId}`
+          );
+
+          const agent = res.data?.[0];
+          if (!agent) return;
+
+          setRole(agent.role ?? "");
+          setGoal(agent.goal ?? "");
+          setBackstory(agent.backstory ?? "");
+          setModelId(agent.model_id ?? "");
+        } catch (err) {
+          console.error(err);
+        }
+      };
+
+      fetchAgentSettings();
+    } else {
+      setRole("");
+      setGoal("");
+      setBackstory("");
+      setModelId("");
+    }
+  }, [node, fetchSettings, projectId]);
 
   if (!node) return null;
 
-  const handleSave = () => {
-    const updatedNode = {
-      ...node,
-      data: {
-        ...node.data,
-        label,
-      },
+  const handleSave = async () => {
+    const params = {
+      id: node.dbId,
+      project_id: Number(projectId),
+      role,
+      goal,
+      backstory,
+      model_id: Number(modelId),
     };
-    onChange(updatedNode);
-    onClose();
+
+    try {
+      await axiosClient.post("/api/v1/agents/save", params);
+      await onSaved();
+
+      onClose();
+    } catch (err) {
+      console.error("Agent save failed", err);
+    }
   };
 
   return (
@@ -45,19 +83,19 @@ export default function NodeSettingsPanel({ node, onChange, onClose }) {
       <label style={styles.label}>Role</label>
       <input
         style={styles.input}
-        value={label}
-        onChange={(e) => setLabel(e.target.value)}
+        value={role}
+        onChange={(e) => setRole(e.target.value)}
       />
 
       <label style={styles.label}>Model</label>
       <select
-        value={model}
-        onChange={(e) => setModel(e.target.value)}
         style={styles.select}
+        value={modelId}
+        onChange={(e) => setModelId(e.target.value)}
       >
         <option value="">Select Model</option>
         {modelOptions.map((opt) => (
-          <option key={opt.id} value={opt.name}>
+          <option key={opt.id} value={opt.id}>
             {opt.name}
           </option>
         ))}
@@ -105,14 +143,14 @@ const styles = {
     marginBottom: 20,
     fontWeight: "bold",
   },
-  label: { 
-    fontSize: 12, 
-    marginBottom: 6, 
-    display: "block" 
+  label: {
+    fontSize: 12,
+    marginBottom: 6,
+    display: "block",
   },
   input: {
     width: "100%",
-    padding: "8px 12px", 
+    padding: "8px 12px",
     borderRadius: 6,
     border: "1px solid #ddd",
     marginBottom: 10,
@@ -130,12 +168,12 @@ const styles = {
   },
   textarea: {
     width: "100%",
-    minHeight: 180,          
+    minHeight: 180,
     padding: "8px 12px",
     borderRadius: 6,
     border: "1px solid #ddd",
     marginBottom: 10,
-    resize: "vertical",      
+    resize: "vertical",
     boxSizing: "border-box",
     fontFamily: "inherit",
     fontSize: 12,

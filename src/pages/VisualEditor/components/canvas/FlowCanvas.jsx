@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   ReactFlow,
   useReactFlow,
@@ -7,86 +8,80 @@ import {
   useEdgesState,
   addEdge,
 } from "@xyflow/react";
+import axiosClient from "../../../../api/axiosClient";
 import AgentNode from "../nodes/AgentNode";
 import TaskNode from "../nodes/TaskNode";
 import AgentSettingsPanel from "../panel/AgentSettingsPanel";
 import TaskSettingsPanel from "../panel/TaskSettingsPanel";
 import "@xyflow/react/dist/style.css";
 
+const nodeTypes = {
+  agent: AgentNode,
+  task: TaskNode,
+};
+
 export default function FlowCanvas({ setFlowData, initialFlow }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialFlow?.nodes || []);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialFlow?.edges || []);
   const [selectedNode, setSelectedNode] = useState(null);
-
+  const [isFetchingSettings, setIsFetchingSettings] = useState(false);
   const { screenToFlowPosition } = useReactFlow();
+  const [searchParams] = useSearchParams();
+  const projectId = searchParams.get("project_id");
 
   useEffect(() => {
     if (initialFlow) {
       setNodes(initialFlow.nodes || []);
       setEdges(initialFlow.edges || []);
     }
-  }, [initialFlow])
+  }, [initialFlow, setNodes, setEdges]);
 
-  // 내부 상태를 부모와 동기화하기 위한 useEffect
-  useEffect(() => {
-    if (setFlowData) {
-      setFlowData({ nodes, edges });
+  const refreshFlow = useCallback(async () => {
+    try {
+      const res = await axiosClient.get(`/api/v1/crew/flow/${projectId}`);
+      setNodes(res.data.nodes || []);
+      setEdges(res.data.edges || []);
+    } catch (err) {
+      console.error("Failed to refresh flow", err);
     }
-  }, [nodes, edges, setFlowData]);
+  }, [projectId, setNodes, setEdges]);
 
-  // 노드 클릭 시 설정 패널 열기
-  const openSettings = useCallback(
-    (nodeId) => {
-      const node = nodes.find((n) => n.id === nodeId);
-      if (node) setSelectedNode(node);
-    },
-    [nodes]
-  );
+  const openSettings = useCallback((node) => {
+    setSelectedNode(node);
+    setIsFetchingSettings(!node.id.startsWith("tmp-"));
+  }, []);
 
-  // 노드 타입 정의
-  const nodeTypes = useMemo(
-    () => ({
-      agent: (props) => <AgentNode {...props} onOpenSettings={openSettings} />,
-      task: (props) => <TaskNode {...props} onOpenSettings={openSettings} />,
-    }),
-    [openSettings]
-  );
-
-  // 노드 수정 시
-  const handleNodeChange = useCallback(
-    (updatedNode) => {
-      setNodes((nds) =>
-        nds.map((n) => (n.id === updatedNode.id ? updatedNode : n))
-      );
-      setSelectedNode(null);
-    },
-    [setNodes]
-  );
-
-  // 노드 연결
   const handleConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
 
-  // 드래그앤드롭으로 새 노드 추가
   const onDrop = useCallback(
     (event) => {
       event.preventDefault();
+
       const type = event.dataTransfer.getData("application/reactflow");
       if (!type) return;
 
+      
       const position = screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
       });
 
-      const id = `${type}-${Date.now()}`;
+      let nodeData = {};
+
+      if (type === 'agent') {
+        nodeData = {role: "newNode"}
+      } else {
+        nodeData = {name: "newNode"}
+      }
+
       const newNode = {
-        id,
+        id: `tmp-${Date.now()}`,
         type,
         position,
-        data: { label: type.charAt(0).toUpperCase() + type.slice(1), id },
+        data: nodeData
       };
 
       setNodes((nds) => nds.concat(newNode));
@@ -109,6 +104,7 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
           onEdgesChange={onEdgesChange}
           onConnect={handleConnect}
           nodeTypes={nodeTypes}
+          onNodeClick={(event, node) => openSettings(node)}
         >
           <Background />
         </ReactFlow>
@@ -117,16 +113,24 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
       {selectedNode && selectedNode.type === "agent" && (
         <AgentSettingsPanel
           node={selectedNode}
-          onChange={handleNodeChange}
-          onClose={() => setSelectedNode(null)}
+          fetchSettings={isFetchingSettings}
+          onSaved={refreshFlow}
+          onClose={() => {
+            setSelectedNode(null);
+            setIsFetchingSettings(false);
+          }}
         />
       )}
 
       {selectedNode && selectedNode.type === "task" && (
         <TaskSettingsPanel
           node={selectedNode}
-          onChange={handleNodeChange}
-          onClose={() => setSelectedNode(null)}
+          fetchSettings={isFetchingSettings}
+          onSaved={refreshFlow}
+          onClose={() => {
+            setSelectedNode(null);
+            setIsFetchingSettings(false);
+          }}
         />
       )}
     </div>

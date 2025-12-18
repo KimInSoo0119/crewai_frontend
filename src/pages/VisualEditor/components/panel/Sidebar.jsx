@@ -10,18 +10,40 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
   const projectId = searchParams.get("project_id");
 
   const buildExecuteFlowParams = (nodes, edges, projectId) => {
-    const formattedNodes = nodes.map(node => ({
-      id: String(node.id),                    
-      dbId: node.dbId ?? null,                
-      type: String(node.type),
-      position: {
-        x: node.position?.x ?? 0,            
-        y: node.position?.y ?? 0
-      },
-      data: {
-        label: node.data?.label ?? "",       
+    const formattedNodes = nodes.map(node => {
+      let nodeData = {};
+
+      switch (node.type) {
+        case 'agent':
+          nodeData = {
+            id: node.data?.id ?? null,
+            role: node.data?.role ?? "",
+            backstory: node.data?.backstory ?? "",
+            goal: node.data?.goal ?? ""
+          };
+          break;
+        default:
+          nodeData = {
+            id: node.data?.id ?? null,
+            agent_id: node.data?.agent_id ?? null,
+            name: node.data?.name ?? null,
+            description: node.data?.description ?? "",
+            expected_output: node.data?.expected_output ?? ""
+          };
+          break;
       }
-    }));
+
+      return {
+        id: String(node.id),
+        dbId: node.dbId ?? null,
+        type: String(node.type),
+        position: {
+          x: node.position?.x ?? 0,
+          y: node.position?.y ?? 0
+        },
+        data: nodeData
+      };
+    });
 
     const formattedEdges = edges.map(edge => ({
       id: String(edge.id),
@@ -31,11 +53,11 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
     }));
 
     return {
-      project_id: Number(projectId),  // 반드시 int
+      project_id: Number(projectId),
       nodes: formattedNodes,
       edges: formattedEdges
     };
-  }
+  };
 
   const handleExecute = async () => {
     if (!projectId) {
