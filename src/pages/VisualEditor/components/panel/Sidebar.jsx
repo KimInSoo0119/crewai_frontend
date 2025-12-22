@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Sidebar as ProSidebar, Menu, MenuItem, SubMenu } from "react-pro-sidebar";
 import { useSearchParams } from "react-router-dom";
 import ExecutionPopup from "../popup/ExecutionPopup";
+import { poll } from "../../../../utils/polling";
 import axiosClient from "../../../../api/axiosClient";
 
 export default function Sidebar({ collapsed, onToggle, flowData }) {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [resultData, setResultData] = useState(null);
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("project_id");
 
@@ -17,6 +19,7 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
         case 'agent':
           nodeData = {
             id: node.data?.id ?? null,
+            model_id: node.data?.model_id ?? null,
             role: node.data?.role ?? "",
             backstory: node.data?.backstory ?? "",
             goal: node.data?.goal ?? ""
@@ -70,14 +73,21 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
       return;
     }
 
+    setIsPopupOpen(true);
+
     try {
       const params = buildExecuteFlowParams(flowData.nodes, flowData.edges, projectId)
-      const res = await axiosClient.post(
-        "/api/v1/crew/flow/execute",
-        params
-      );
+      const res = await axiosClient.post("/api/v1/crew/flow/execute", params);
+      const executionId = res.data?.execution_id;
+      
+      const result = await poll({
+        func: () => axiosClient.get(`/api/v1/crew/flow/status?execution_id=${executionId}`),
+        interval: 30000,
+        maxAttempts: 10,
+        checkDone: (res) => res.data?.status === true
+      })
 
-      setIsPopupOpen(true);
+      // setResultData(result.data)
     } catch (error) {
       console.error("Failed to execute flow:", error);
       alert("실행 중 오류가 발생했습니다.");
