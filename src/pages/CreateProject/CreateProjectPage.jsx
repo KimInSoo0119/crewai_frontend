@@ -25,7 +25,7 @@ export default function CreateProjectPage() {
     try {
       const params = { title: title }
       const res = await axiosClient.post("/api/v1/crew/create", params);
-      const projectId = res.data.id;
+      const projectId = res.data;
       setIsModalOpen(false);
       navigate(`/editor?project_id=${projectId}`);
     } catch (error) {

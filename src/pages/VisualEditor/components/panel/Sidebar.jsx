@@ -80,19 +80,24 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
       const res = await axiosClient.post("/api/v1/crew/flow/execute", params);
       const executionId = res.data?.execution_id;
       
-      const result = await poll({
-        func: () => axiosClient.get(`/api/v1/crew/flow/status?execution_id=${executionId}`),
+      const res_ = await poll({
+        func: () => axiosClient.get(`/api/v1/crew/flow/status/${executionId}`),
         interval: 30000,
         maxAttempts: 10,
-        checkDone: (res) => res.data?.status === true
+        checkDone: (res) => res.data[0]?.status === true
       })
 
-      // setResultData(result.data)
+      setResultData(res_.data[0].result)
     } catch (error) {
       console.error("Failed to execute flow:", error);
       alert("실행 중 오류가 발생했습니다.");
     }
   };
+
+  const handleClose = () => {
+    setIsPopupOpen(false);
+    setResultData([]);
+  }
 
   const onDragStart = (e, type) => {
     e.dataTransfer.setData("application/reactflow", type);
@@ -144,9 +149,10 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
       
       <ExecutionPopup
         isOpen={isPopupOpen}
-        onClose={() => setIsPopupOpen(false)}
-        event={"agent->task"}
-        result={"이것은 실행 결과 입니다.\nLLM Output..."}
+        onClose={handleClose}
+        event={resultData?.agent_hierarchy}
+        workflow={resultData?.workflow}
+        finalOutput={resultData?.final_output}
       />
     </div>
   );
