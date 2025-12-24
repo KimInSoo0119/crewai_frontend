@@ -7,8 +7,8 @@ import {
   useNodesState,
   useEdgesState,
   addEdge,
+  reconnectEdge,
 } from "@xyflow/react";
-import axiosClient from "../../../../api/axiosClient";
 import AgentNode from "../nodes/AgentNode";
 import TaskNode from "../nodes/TaskNode";
 import AgentSettingsPanel from "../panel/AgentSettingsPanel";
@@ -28,13 +28,10 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
   const { screenToFlowPosition } = useReactFlow();
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("project_id");
-
-  // initialFlow로부터의 초기 세팅은 한 번만 수행하고,
-  // 이후에는 FlowCanvas 내부 상태를 단일 source of truth로 유지
   const initializedRef = useRef(false);
+  const edgeReconnectSuccessful = useRef(true);
 
   useEffect(() => {
-    // 조회 API가 완료되어 실제 노드/엣지가 넘어왔을 때 한 번만 초기화
     const hasInitialData =
       initialFlow &&
       ((Array.isArray(initialFlow.nodes) && initialFlow.nodes.length > 0) ||
@@ -47,26 +44,85 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
     }
   }, [initialFlow, setNodes, setEdges]);
 
-  // 노드 / 엣지 상태가 변경될 때마다 부모의 flowData를 최신 화면 기준으로 동기화
   useEffect(() => {
     if (typeof setFlowData === "function") {
       setFlowData({ nodes, edges });
     }
   }, [nodes, edges, setFlowData]);
 
-  const refreshFlow = useCallback(async () => {
-    try {
-      const res = await axiosClient.get(`/api/v1/crew/flow/${projectId}`);
-      setNodes(res.data.nodes || []);
-      setEdges(res.data.edges || []);
-    } catch (err) {
-      console.error("Failed to refresh flow", err);
+  const updateNodeData = useCallback((nodeId, newData) => {
+    console.log("updateNodeData called with:", { nodeId, newData });
+    
+    const oldNodeId = nodeId;
+    const newNodeId = (newData.dbId && String(nodeId).startsWith("tmp-")) 
+      ? String(newData.dbId) 
+      : nodeId;
+
+    setNodes((nds) => {
+      const updated = nds.map((node) => {
+        if (node.id === oldNodeId) {
+          const updatedNode = {
+            ...node,
+            id: newNodeId,
+            data: {
+              ...node.data,
+              ...newData,
+            },
+            dbId: newData.dbId || node.dbId,
+          };
+          console.log("Node updated:", updatedNode);
+          return updatedNode;
+        }
+        return node;
+      });
+      console.log("All nodes after update:", updated);
+      return updated;
+    });
+
+    if (oldNodeId !== newNodeId) {
+      setEdges((eds) =>
+        eds.map((edge) => ({
+          ...edge,
+          source: edge.source === oldNodeId ? newNodeId : edge.source,
+          target: edge.target === oldNodeId ? newNodeId : edge.target,
+        }))
+      );
     }
-  }, [projectId, setNodes, setEdges]);
+  }, [setNodes, setEdges]);
 
   const openSettings = useCallback((node) => {
     setSelectedNode(node);
     setIsFetchingSettings(!node.id.startsWith("tmp-"));
+  }, []);
+
+  const validateConnection = useCallback((sourceNode, targetNode, sourceHandle, targetHandle) => {
+    if (!sourceNode || !targetNode) {
+      return { valid: false, message: "노드를 찾을 수 없습니다." };
+    }
+
+    if (sourceNode.type === "agent") {
+      if (targetNode.type !== "task" || targetHandle !== "task-top") {
+        return { valid: false, message: "Agent는 Task의 위쪽 점과만 연결할 수 있습니다." };
+      }
+    }
+
+    if (sourceNode.type === "task") {
+      if (sourceHandle === "task-top") {
+        return { valid: false, message: "Task의 위쪽 점에서는 연결을 시작할 수 없습니다." };
+      }
+
+      if (targetNode.type === "agent") {
+        return { valid: false, message: "Task는 Agent와 연결할 수 없습니다. (Agent -> Task만 가능)" };
+      }
+
+      if (targetNode.type === "task") {
+        if (!(sourceHandle === "task-right" && targetHandle === "task-left")) {
+          return { valid: false, message: "Task 간에는 오른쪽 점에서 왼쪽 점으로만 연결할 수 있습니다." };
+        }
+      }
+    }
+
+    return { valid: true };
   }, []);
 
   const handleConnect = useCallback(
@@ -78,48 +134,63 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
         (n) => String(n.id) === String(params.target)
       );
 
-      if (!sourceNode || !targetNode) {
+      const validation = validateConnection(
+        sourceNode,
+        targetNode,
+        params.sourceHandle,
+        params.targetHandle
+      );
+
+      if (!validation.valid) {
+        alert(validation.message);
         return;
       }
 
-      const { sourceHandle, targetHandle } = params;
-
-      // 1) Agent 규칙
-      if (sourceNode.type === "agent") {
-        // Agent는 Task 위쪽 점(task-top)으로만 연결
-        if (targetNode.type !== "task" || targetHandle !== "task-top") {
-          alert("Agent는 Task의 위쪽 점과만 연결할 수 있습니다.");
-          return;
-        }
-      }
-
-      // 2) Task 규칙
-      if (sourceNode.type === "task") {
-        // Task 위쪽 점에서는 시작 불가
-        if (sourceHandle === "task-top") {
-          alert("Task의 위쪽 점에서는 연결을 시작할 수 없습니다.");
-          return;
-        }
-
-        if (targetNode.type === "agent") {
-          // Task -> Agent 금지
-          alert("Task는 Agent와 연결할 수 없습니다. (Agent -> Task만 가능)");
-          return;
-        }
-
-        if (targetNode.type === "task") {
-          // Task -> Task 는 오른쪽(source: task-right) -> 왼쪽(target: task-left)만 허용
-          if (!(sourceHandle === "task-right" && targetHandle === "task-left")) {
-            alert("Task 간에는 오른쪽 점에서 왼쪽 점으로만 연결할 수 있습니다.");
-            return;
-          }
-        }
-      }
-
-      // 위 조건을 모두 통과하면 엣지 생성
       setEdges((eds) => addEdge(params, eds));
     },
-    [nodes, setEdges]
+    [nodes, setEdges, validateConnection]
+  );
+
+  const onReconnectStart = useCallback(() => {
+    edgeReconnectSuccessful.current = false;
+  }, []);
+
+  const onReconnect = useCallback(
+    (oldEdge, newConnection) => {
+      const sourceNode = nodes.find(
+        (n) => String(n.id) === String(newConnection.source)
+      );
+      const targetNode = nodes.find(
+        (n) => String(n.id) === String(newConnection.target)
+      );
+
+      const validation = validateConnection(
+        sourceNode,
+        targetNode,
+        newConnection.sourceHandle,
+        newConnection.targetHandle
+      );
+
+      if (!validation.valid) {
+        alert(validation.message);
+        return;
+      }
+
+      edgeReconnectSuccessful.current = true;
+      setEdges((els) => reconnectEdge(oldEdge, newConnection, els));
+    },
+    [nodes, setEdges, validateConnection]
+  );
+
+  const onReconnectEnd = useCallback(
+    (_, edge) => {
+      if (!edgeReconnectSuccessful.current) {
+        setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+      }
+
+      edgeReconnectSuccessful.current = true;
+    },
+    [setEdges]
   );
 
   const onDrop = useCallback(
@@ -129,7 +200,6 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
       const type = event.dataTransfer.getData("application/reactflow");
       if (!type) return;
 
-      
       const position = screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
@@ -169,8 +239,12 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={handleConnect}
+          onReconnect={onReconnect}
+          onReconnectStart={onReconnectStart}
+          onReconnectEnd={onReconnectEnd}
           nodeTypes={nodeTypes}
           onNodeClick={(event, node) => openSettings(node)}
+          reconnectRadius={20}
         >
           <Background />
         </ReactFlow>
@@ -180,7 +254,7 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
         <AgentSettingsPanel
           node={selectedNode}
           fetchSettings={isFetchingSettings}
-          onSaved={refreshFlow}
+          onNodeUpdate={updateNodeData}
           onClose={() => {
             setSelectedNode(null);
             setIsFetchingSettings(false);
@@ -192,7 +266,7 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
         <TaskSettingsPanel
           node={selectedNode}
           fetchSettings={isFetchingSettings}
-          onSaved={refreshFlow}
+          onNodeUpdate={updateNodeData}
           onClose={() => {
             setSelectedNode(null);
             setIsFetchingSettings(false);

@@ -52,7 +52,9 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
       id: String(edge.id),
       dbId: edge.dbId ?? null,
       source: String(edge.source),
-      target: String(edge.target)
+      target: String(edge.target),
+      sourceHandle: edge.sourceHandle ?? null,
+      targetHandle: edge.targetHandle ?? null
     }));
 
     return {

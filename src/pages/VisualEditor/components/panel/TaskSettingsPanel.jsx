@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import axiosClient from "../../../../api/axiosClient";
 
-export default function TaskSettingsPanel({node, fetchSettings, onSaved, onClose,}) {
+export default function TaskSettingsPanel({node, fetchSettings, onClose, onNodeUpdate}) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [expectedOutput, setExpectedOutput] = useState("");
@@ -17,6 +17,7 @@ export default function TaskSettingsPanel({node, fetchSettings, onSaved, onClose
           const res = await axiosClient.get(
             `/api/v1/tasks/projects/${projectId}/tasks/${node.dbId}`
           );
+
           const task = res.data?.[0];
           if (!task) return;
 
@@ -30,9 +31,10 @@ export default function TaskSettingsPanel({node, fetchSettings, onSaved, onClose
 
       fetchTaskSettings();
     } else {
-      setName("");
-      setDescription("");
-      setExpectedOutput("");
+      // 임시 노드의 경우 기존 데이터 유지
+      setName(node.data?.name ?? "");
+      setDescription(node.data?.description ?? "");
+      setExpectedOutput(node.data?.expected_output ?? "");
     }
   }, [node, fetchSettings, projectId]);
 
@@ -42,15 +44,30 @@ export default function TaskSettingsPanel({node, fetchSettings, onSaved, onClose
     const params = {
       id: node.dbId,
       project_id: Number(projectId),
-      agent_id: node.agent_id,
-      name: name,
-      description: description,
+      name,
+      description,
       expected_output: expectedOutput,
     };
 
     try {
-      await axiosClient.post("/api/v1/tasks/save", params);
-      await onSaved();
+      const response = await axiosClient.post("/api/v1/tasks/save", params);
+      
+      // 저장 후 반환된 데이터로 해당 노드만 업데이트
+      if (onNodeUpdate) {
+        const updatedNodeData = {
+          name: name,
+          description: description,
+          expected_output: expectedOutput,
+          dbId: response.data?.id || node.dbId, // 새로 생성된 경우 ID 업데이트
+        };
+        
+        console.log("Updating task node with data:", updatedNodeData);
+        onNodeUpdate(node.id, updatedNodeData);
+      }
+      
+      // 전체 플로우를 새로고침하지 않음
+      // await onSaved(); // 이 줄을 제거하거나 조건부로 사용
+
       onClose();
     } catch (err) {
       console.error("Task save failed", err);
@@ -66,6 +83,7 @@ export default function TaskSettingsPanel({node, fetchSettings, onSaved, onClose
         style={styles.input}
         value={name}
         onChange={(e) => setName(e.target.value)}
+        placeholder="Enter task name"
       />
 
       <label style={styles.label}>Description</label>
@@ -73,7 +91,7 @@ export default function TaskSettingsPanel({node, fetchSettings, onSaved, onClose
         style={styles.textarea}
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        placeholder="Enter description"
+        placeholder="Enter task description"
       />
 
       <label style={styles.label}>Expected Output</label>
@@ -105,6 +123,7 @@ const styles = {
     padding: 20,
     boxShadow: "-4px 0 10px rgba(0,0,0,0.1)",
     zIndex: 999,
+    overflowY: "auto",
   },
   title: {
     marginBottom: 20,

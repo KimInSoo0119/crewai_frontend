@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import axiosClient from "../../../../api/axiosClient";
 
-export default function AgentSettingsPanel({node, fetchSettings, onSaved, onClose,}) {
+export default function AgentSettingsPanel({node, fetchSettings, onClose, onNodeUpdate}) {
   const [role, setRole] = useState("");
   const [goal, setGoal] = useState("");
   const [backstory, setBackstory] = useState("");
@@ -47,10 +47,11 @@ export default function AgentSettingsPanel({node, fetchSettings, onSaved, onClos
 
       fetchAgentSettings();
     } else {
-      setRole("");
-      setGoal("");
-      setBackstory("");
-      setModelId("");
+      // 임시 노드의 경우 기존 데이터 유지
+      setRole(node.data?.role ?? "");
+      setGoal(node.data?.goal ?? "");
+      setBackstory(node.data?.backstory ?? "");
+      setModelId(node.data?.model_id ?? "");
     }
   }, [node, fetchSettings, projectId]);
 
@@ -67,8 +68,24 @@ export default function AgentSettingsPanel({node, fetchSettings, onSaved, onClos
     };
 
     try {
-      await axiosClient.post("/api/v1/agents/save", params);
-      await onSaved();
+      const response = await axiosClient.post("/api/v1/agents/save", params);
+      
+      // 저장 후 반환된 데이터로 해당 노드만 업데이트
+      if (onNodeUpdate) {
+        const updatedNodeData = {
+          role: role,
+          goal: goal,
+          backstory: backstory,
+          model_id: modelId,
+          dbId: response.data?.id || node.dbId, // 새로 생성된 경우 ID 업데이트
+        };
+        
+        console.log("Updating node with data:", updatedNodeData);
+        onNodeUpdate(node.id, updatedNodeData);
+      }
+      
+      // 전체 플로우를 새로고침하지 않음
+      // await onSaved(); // 이 줄을 제거하거나 조건부로 사용
 
       onClose();
     } catch (err) {
@@ -138,6 +155,7 @@ const styles = {
     padding: 20,
     boxShadow: "-4px 0 10px rgba(0,0,0,0.1)",
     zIndex: 999,
+    overflowY: "auto",
   },
   title: {
     marginBottom: 20,
