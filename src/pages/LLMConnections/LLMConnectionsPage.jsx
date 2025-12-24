@@ -5,6 +5,7 @@ export default function LLMConnectionsPage() {
   const [connectionName, setConnectionName] = useState("");
   const [provider, setProvider] = useState("");
   const [providerOptions, setProviderOptions] = useState([]);
+  const [llmList, setLlmList] = useState([]);
   const [envVars, setEnvVars] = useState([
     { id: crypto.randomUUID(), key: "OPENAI_API_KEY", value: "" },
     { id: crypto.randomUUID(), key: "OPENAI_API_BASE", value: "" },
@@ -21,6 +22,20 @@ export default function LLMConnectionsPage() {
     };
     fetchProviders();
   }, []);
+
+  useEffect(() => {
+    fetchLLMList();
+  }, []);
+
+  const fetchLLMList = async () => {
+    try {
+      const res = await axiosClient.get("/api/v1/llm/list");
+      setLlmList(res.data || []);
+    } catch (error) {
+      console.error("Failed to fetch LLM list:", error);
+      setLlmList([]);
+    }
+  };
 
   const addVariable = () => {
     setEnvVars([...envVars, { id: crypto.randomUUID(), key: "", value: "" }]);
@@ -63,6 +78,7 @@ export default function LLMConnectionsPage() {
       ]);
 
       alert("Connection added successfully!");
+      fetchLLMList();
     } catch (error) {
       console.error("Failed to add connection:", error);
       alert("Failed to add connection. Check console for details.");
@@ -73,6 +89,40 @@ export default function LLMConnectionsPage() {
     <div style={styles.pageContainer}>
       <h1 style={styles.title}>LLM Connections</h1>
       <p style={styles.subtitle}>Manage your language model API connections</p>
+
+      <div style={styles.listContainer}>
+        <h2 style={styles.sectionTitle}>Connected LLM Models ({llmList.length})</h2>
+        {llmList.length === 0 ? (
+          <div style={styles.emptyState}>No LLM connections found. Add one below.</div>
+        ) : (
+          <div style={styles.tableWrapper}>
+            <table style={styles.table}>
+              <thead>
+                <tr style={styles.tableHeaderRow}>
+                  <th style={styles.tableHeader}>Name</th>
+                  <th style={styles.tableHeader}>Provider</th>
+                  <th style={styles.tableHeader}>API Base URL</th>
+                  <th style={styles.tableHeader}>Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {llmList.map((llm) => (
+                  <tr key={llm.id} style={styles.tableRow}>
+                    <td style={styles.tableCell}>{llm.name}</td>
+                    <td style={styles.tableCell}>
+                      <span style={styles.providerBadge}>{llm.provider}</span>
+                    </td>
+                    <td style={styles.tableCell}>{llm.api_base_url}</td>
+                    <td style={styles.tableCell}>
+                      {new Date(llm.create_time).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       <div style={styles.formContainer}>
         <div style={styles.formHeader}>
@@ -175,6 +225,62 @@ const styles = {
     color: "#666",
     marginBottom: "28px",
     lineHeight: 1.45,
+  },
+  listContainer: {
+    marginBottom: "30px",
+    border: "1px solid #ddd",
+    borderRadius: "10px",
+    padding: "22px 24px",
+    backgroundColor: "#fff",
+    boxShadow: "0 4px 14px rgba(0,0,0,0.06)",
+  },
+  sectionTitle: {
+    fontWeight: "500",
+    fontSize: "1.1rem",
+    margin: "0 0 16px 0",
+    color: "#222",
+  },
+  emptyState: {
+    textAlign: "center",
+    padding: "40px 20px",
+    color: "#999",
+    fontSize: "14px",
+  },
+  tableWrapper: {
+    overflowX: "auto",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+  },
+  tableHeaderRow: {
+    borderBottom: "2px solid #e0e0e0",
+  },
+  tableHeader: {
+    textAlign: "left",
+    padding: "12px 16px",
+    fontSize: "12px",
+    fontWeight: "700",
+    color: "#666",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+  },
+  tableRow: {
+    borderBottom: "1px solid #f0f0f0",
+  },
+  tableCell: {
+    padding: "14px 16px",
+    fontSize: "13px",
+    color: "#333",
+  },
+  providerBadge: {
+    display: "inline-block",
+    padding: "4px 10px",
+    borderRadius: "12px",
+    backgroundColor: "#e9f0fa",
+    color: "#1e40af",
+    fontSize: "11px",
+    fontWeight: "600",
   },
   formContainer: {
     border: "1px solid #ddd",
@@ -289,18 +395,6 @@ const styles = {
     fontSize: "12.5px",
     color: "#1b1b1b",
     lineHeight: 1.45,
-  },
-
-  fetchButton: {
-    padding: "9px 18px",
-    borderRadius: "8px",
-    border: "1px solid #666",
-    background: "transparent",
-    cursor: "pointer",
-    fontSize: "13px",
-    fontWeight: "600",
-    marginBottom: "20px",
-    transition: "background-color 0.25s ease, color 0.25s ease",
   },
 
   submitButton: {

@@ -7,6 +7,7 @@ export default function CreateProjectPage() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null); 
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -35,6 +36,18 @@ export default function CreateProjectPage() {
 
   const openProject = (id) => {
     navigate(`/editor?project_id=${id}`);
+  };
+
+  const deleteProject = async (id) => {
+    try {
+      await axiosClient.delete(`/api/v1/crew/delete/${id}`);
+      setProjects((prevProjects) =>
+        prevProjects.filter((project) => project.id !== id)
+      );
+    } catch (error) {
+      console.error("Failed to delete project:", error);
+      alert("프로젝트 삭제에 실패했습니다.");
+    }
   };
 
   return (
@@ -71,23 +84,67 @@ export default function CreateProjectPage() {
             }}
           >
             <span style={styles.projectName}>{project.title}</span>
-            <button
-              style={styles.openButton}
-              onClick={() => openProject(project.id)}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#222";
-                e.currentTarget.style.borderColor = "#555";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "black";
-                e.currentTarget.style.borderColor = "#333";
-              }}
-            >
-              Open
-            </button>
+            
+            <div style={styles.buttonGroup}>
+              <button
+                style={styles.openButton}
+                onClick={() => openProject(project.id)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#222";
+                  e.currentTarget.style.borderColor = "#555";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "black";
+                  e.currentTarget.style.borderColor = "#333";
+                }}
+              >
+                Open
+              </button>
+              <button
+                style={styles.deleteButton}
+                onClick={() => setDeleteTarget(project)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#8b0000";
+                  e.currentTarget.style.borderColor = "#b00020";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "#b00020";
+                  e.currentTarget.style.borderColor = "#b00020";
+                }}
+              >
+                Delete
+              </button>
+            </div>
           </div>
         ))}
       </div>
+
+      {deleteTarget && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <p style={{ marginBottom: "10px" }}>
+            <strong style={{ color: "#b00020" }}>{deleteTarget.title}</strong> 프로젝트를 삭제하시겠습니까?
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "20px" }}>
+              <button
+                onClick={() => {
+                  deleteProject(deleteTarget.id);
+                  setDeleteTarget(null);
+                }}
+                style={styles.deleteButton}
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => setDeleteTarget(null)}
+                style={styles.cancelButton}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <CreateProjectPopup
         isOpen={isModalOpen}
@@ -142,6 +199,10 @@ const styles = {
     fontSize: "16px",
     fontWeight: "500",
   },
+  buttonGroup: {
+    display: "flex",
+    gap: "10px", 
+  },
   openButton: {
     padding: "8px 16px",
     borderRadius: "6px",
@@ -151,5 +212,44 @@ const styles = {
     cursor: "pointer",
     fontWeight: "500",
     transition: "all 0.2s",
+  },
+  deleteButton: {
+    padding: "8px 16px",
+    borderRadius: "6px",
+    border: "2px solid #b00020",
+    background: "#b00020",
+    color: "white",
+    cursor: "pointer",
+    fontWeight: "500",
+    transition: "all 0.2s",
+  },
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+  },
+  modal: {
+    background: "#fff",
+    padding: "30px",
+    borderRadius: "10px",
+    maxWidth: "400px",
+    width: "90%",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+  },
+  cancelButton: {
+    padding: "8px 16px",
+    borderRadius: "6px",
+    border: "2px solid #555",
+    background: "white",
+    color: "#333",
+    cursor: "pointer",
+    fontWeight: "500",
   },
 };
