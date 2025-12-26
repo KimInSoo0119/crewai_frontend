@@ -3,21 +3,34 @@ import { Handle, Position } from "@xyflow/react";
 export default function TaskNode({ data }) {
   return (
     <div style={styles.container}>
-      <div style={styles.title}>{data.name || "New Task"}</div>
-      {data.description && (
-        <div style={styles.info}>
-          <span style={styles.label}>Description:</span> {data.description.substring(0, 50)}
-          {data.description.length > 50 ? "..." : ""}
+      <div style={styles.headerBar}></div>
+      <div style={styles.content}>
+        <div style={styles.iconWrapper}>
+          <span style={styles.icon}>📋</span>
         </div>
-      )}
-      {data.expected_output && (
-        <div style={styles.info}>
-          <span style={styles.label}>Output:</span> {data.expected_output.substring(0, 50)}
-          {data.expected_output.length > 50 ? "..." : ""}
+        <div style={styles.textContent}>
+          <div style={styles.title}>{data.name || "New Task"}</div>
+          {data.description && (
+            <div style={styles.info}>
+              <span style={styles.label}>Description</span>
+              <span style={styles.value}>
+                {data.description.substring(0, 45)}
+                {data.description.length > 45 ? "..." : ""}
+              </span>
+            </div>
+          )}
+          {data.expected_output && (
+            <div style={styles.info}>
+              <span style={styles.label}>Output</span>
+              <span style={styles.value}>
+                {data.expected_output.substring(0, 45)}
+                {data.expected_output.length > 45 ? "..." : ""}
+              </span>
+            </div>
+          )}
         </div>
-      )}
+      </div>
       
-      {/* 위쪽: 입력(target) - agent의 아래쪽(source)과만 연결 */}
       <Handle
         id="task-top"
         type="target"
@@ -25,7 +38,6 @@ export default function TaskNode({ data }) {
         style={styles.handleTop}
       />
       
-      {/* 왼쪽: 입력(target) - 다른 task의 오른쪽(source)과만 연결 */}
       <Handle
         id="task-left"
         type="target"
@@ -33,7 +45,6 @@ export default function TaskNode({ data }) {
         style={styles.handleSide}
       />
       
-      {/* 오른쪽: 출력(source) - 다른 task의 왼쪽(target)과만 연결 */}
       <Handle
         id="task-right"
         type="source"
@@ -46,45 +57,88 @@ export default function TaskNode({ data }) {
 
 const styles = {
   container: {
-    padding: "12px 16px",
-    borderRadius: 10,
-    border: "1px solid #1c7cc4ff",
-    background: "#fff",
-    width: 180,
-    boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
+    borderRadius: "12px",
+    border: "1.5px solid #3b82f6",
+    background: "linear-gradient(135deg, #ffffff 0%, #eff6ff 100%)",
+    width: 220,
+    boxShadow: "0 4px 12px rgba(59, 130, 246, 0.15), 0 2px 4px rgba(0,0,0,0.06)",
+    fontFamily: "system-ui, -apple-system, sans-serif",
+    position: "relative",
+    overflow: "hidden",
+    transition: "all 0.2s ease",
+  },
+  headerBar: {
+    height: "4px",
+    background: "linear-gradient(90deg, #3b82f6 0%, #2563eb 100%)",
+    width: "100%",
+  },
+  content: {
+    padding: "14px 16px",
+    display: "flex",
+    gap: "12px",
+  },
+  iconWrapper: {
+    width: "36px",
+    height: "36px",
+    borderRadius: "8px",
+    background: "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    border: "1px solid #93c5fd",
+    boxShadow: "0 2px 4px rgba(59, 130, 246, 0.1)",
+  },
+  icon: {
+    fontSize: "1.125rem",
+  },
+  textContent: {
+    flex: 1,
     display: "flex",
     flexDirection: "column",
-    gap: 6,
-    fontFamily: "Arial, sans-serif",
-    position: "relative",
+    gap: "8px",
+    minWidth: 0,
   },
   title: {
-    fontWeight: 600,
-    fontSize: 14,
-    marginBottom: 4,
-    color: "#1c7cc4ff",
+    fontWeight: "600",
+    fontSize: "0.875rem",
+    color: "#1e40af",
+    letterSpacing: "-0.01em",
+    lineHeight: "1.2",
+    wordBreak: "break-word",
   },
   info: {
-    fontSize: 11,
-    color: "#666",
-    lineHeight: 1.4,
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
   },
   label: {
-    fontWeight: 600,
-    color: "#333",
+    fontSize: "0.625rem",
+    fontWeight: "600",
+    color: "#2563eb",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+  },
+  value: {
+    fontSize: "0.6875rem",
+    color: "#6b7280",
+    lineHeight: "1.4",
+    wordBreak: "break-word",
   },
   handleTop: {
-    width: 5,
-    height: 5,
-    background: "#555",
+    width: "8px",
+    height: "8px",
+    background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
     borderRadius: "50%",
-    border: "1px solid #fff",
+    border: "2px solid #fff",
+    boxShadow: "0 2px 4px rgba(59, 130, 246, 0.3)",
   },
   handleSide: {
-    width: 5,
-    height: 5,
-    background: "#555",
+    width: "8px",
+    height: "8px",
+    background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
     borderRadius: "50%",
-    border: "1px solid #fff",
+    border: "2px solid #fff",
+    boxShadow: "0 2px 4px rgba(59, 130, 246, 0.3)",
   },
 };

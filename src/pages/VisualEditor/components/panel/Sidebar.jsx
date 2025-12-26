@@ -76,6 +76,7 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
     }
 
     setIsPopupOpen(true);
+    setResultData(null);
 
     try {
       const params = buildExecuteFlowParams(flowData.nodes, flowData.edges, projectId)
@@ -84,7 +85,7 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
       
       const res_ = await poll({
         func: () => axiosClient.get(`/api/v1/crew/flow/status/${executionId}`),
-        interval: 30000,
+        interval: 8000,
         maxAttempts: 10,
         checkDone: (res) => res.data[0]?.status === true
       })
@@ -93,12 +94,15 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
     } catch (error) {
       console.error("Failed to execute flow:", error);
       alert("실행 중 오류가 발생했습니다.");
+
+      setIsPopupOpen(false);
+      setResultData(null);
     }
   };
 
   const handleClose = () => {
     setIsPopupOpen(false);
-    setResultData([]);
+    setResultData(null);
   }
 
   const onDragStart = (e, type) => {
@@ -110,42 +114,75 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
     <div
       style={{
         ...styles.sidebarWrapper,
-        transform: collapsed ? "translateX(-280px)" : "translateX(0)",
+        transform: collapsed ? "translateX(-250px)" : "translateX(0)",
       }}
     >
       <ProSidebar collapsed={false} style={styles.sidebar}>
-        <div style={styles.header}>CrewAI Studio</div>
+        <div style={styles.header}>
+          <div style={styles.logo}>CrewAI Studio</div>
+          <div style={styles.divider}></div>
+        </div>
 
-        <Menu>
-          <SubMenu label="Crew" style={styles.subMenuLabel}>
-            <MenuItem
-              style={styles.menuItem}
-              draggable
-              onDragStart={(e) => onDragStart(e, "agent")}
-            >
-              Agent
-            </MenuItem>
-            <MenuItem
-              style={styles.menuItem}
-              draggable
-              onDragStart={(e) => onDragStart(e, "task")}
-            >
-              Task
-            </MenuItem>
-          </SubMenu>
-        </Menu>
+        <div style={styles.menuContainer}>
+          <Menu>
+            <SubMenu label="Crew" style={styles.subMenuLabel}>
+              <MenuItem
+                style={styles.menuItem}
+                draggable
+                onDragStart={(e) => onDragStart(e, "agent")}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fff'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fafafa'}
+              >
+                <div style={styles.menuItemContent}>
+                  <span style={styles.menuItemIcon}>👤</span>
+                  <span>Agent</span>
+                </div>
+              </MenuItem>
+              <MenuItem
+                style={styles.menuItem}
+                draggable
+                onDragStart={(e) => onDragStart(e, "task")}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fff'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fafafa'}
+              >
+                <div style={styles.menuItemContent}>
+                  <span style={styles.menuItemIcon}>📋</span>
+                  <span>Task</span>
+                </div>
+              </MenuItem>
+            </SubMenu>
+          </Menu>
+        </div>
 
         <div style={styles.footer}>
           <button
             style={styles.executeButton}
             onClick={handleExecute}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#1a1a1a';
+              e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.12)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#000';
+              e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.08)';
+            }}
           >
-            Execute
+            <span style={styles.executeIcon}>▶</span>
+            <span>Execute Flow</span>
           </button>
         </div>
       </ProSidebar>
 
-      <button onClick={onToggle} style={styles.toggleButton}>
+      <button 
+        onClick={onToggle} 
+        style={styles.toggleButton}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = '#9a9a9a';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = '#b0b0b0';
+        }}
+      >
         {collapsed ? "→" : "←"}
       </button>
       
@@ -167,71 +204,116 @@ const styles = {
     left: 0,
     height: "100vh",
     display: "flex",
-    transition: "transform 0.3s",
+    transition: "transform 0.3s ease",
     zIndex: 999,
   },
   sidebar: {
-    width: 240,
+    width: 260,
     height: "100%",
-    padding: 16,
+    padding: 0,
     backgroundColor: "#fff",
-    boxShadow: "5px 0 5px rgba(0,0,0,0.1)",
+    boxShadow: "2px 0 10px rgba(0,0,0,0.06)",
     display: "flex",
     flexDirection: "column",
     position: "relative",
   },
   header: {
-    fontWeight: "bold",
-    fontSize: 17,
-    marginBottom: 20,
+    padding: "20px 18px 16px",
+  },
+  logo: {
+    fontWeight: "600",
+    fontSize: "1rem",
+    letterSpacing: "-0.01em",
+    color: "#1a1a1a",
+    marginBottom: "14px",
+  },
+  divider: {
+    height: "1px",
+    backgroundColor: "#e5e7eb",
+    width: "100%",
+  },
+  menuContainer: {
+    flex: 1,
+    overflowY: "auto",
+    padding: "10px 14px",
   },
   subMenuLabel: {
-    fontSize: 15,
-    fontWeight: "bold",
+    fontSize: "0.7rem",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+    color: "#6b7280",
+    padding: "6px 4px",
   },
   menuItem: {
-    padding: "6px 12px",
-    borderRadius: 6,
-    border: "1px solid #ddd", 
-    marginBottom: 6,
-    cursor: "pointer",
-    fontSize: 14,
+    padding: "10px 12px",
+    borderRadius: "6px",
+    border: "1px solid #e5e7eb",
+    marginBottom: "6px",
+    cursor: "grab",
+    fontSize: "0.8125rem",
     backgroundColor: "#fff",
+    transition: "all 0.2s ease",
+    fontWeight: "500",
+    boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+  },
+  menuItemContent: {
+    display: "flex",
+    alignItems: "center",
+    gap: "7px",
+  },
+  menuItemIcon: {
+    fontSize: "0.8125rem",
+    display: "flex",
+    alignItems: "center",
   },
   footer: {
-    position: "absolute", 
-    bottom: 16,          
-    left: 16,
-    right: 16,
-    display: "flex",
-    flexDirection: "column"
+    padding: "12px",
+    borderTop: "1px solid #f3f4f6",
+    backgroundColor: "#fff",
+    marginTop: "auto",
   },
   executeButton: {
     width: "100%",
-    padding: "9px 0",
-    marginBottom: "30px",
+    padding: "9px 14px",
     border: "none",
-    borderRadius: 6,
-    backgroundColor: "black",
+    borderRadius: "5px",
+    backgroundColor: "#000",
     color: "#fff",
-    fontSize: 12,
+    fontSize: "0.75rem",
+    fontWeight: "600",
     cursor: "pointer",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-    transition: "background-color 0.2s",
+    boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+    transition: "all 0.2s ease",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "6px",
+    letterSpacing: "0.01em",
+  },
+  executeIcon: {
+    fontSize: "0.5625rem",
+    display: "flex",
+    alignItems: "center",
   },
   toggleButton: {
     position: "absolute",
-    bottom: 20,
-    right: -30,
-    width: 30,
-    height: 50,
+    bottom: 18,
+    right: -26,
+    width: 26,
+    height: 44,
     border: "none",
-    borderRadius: "0 6px 6px 0",
-    backgroundColor: "#b0b0b0", 
+    borderRadius: "0 5px 5px 0",
+    backgroundColor: "#b0b0b0",
     color: "#fff",
-    fontWeight: "bold",
+    fontWeight: "600",
+    fontSize: "0.8125rem",
     cursor: "pointer",
-    transition: "all 0.2s",
+    transition: "all 0.2s ease",
     zIndex: 1000,
+    boxShadow: "2px 2px 6px rgba(0,0,0,0.08)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
 };

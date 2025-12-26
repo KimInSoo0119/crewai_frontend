@@ -41,7 +41,7 @@ export default function ExecutionPopup({isOpen, onClose, event=[], workflow=[], 
     >
       <div style={styles.container}>
         <div style={styles.header}>
-          <h3 style={styles.headerTitle}>실행 결과</h3>
+          <h3 style={styles.headerTitle}>Execution Results</h3>
           <button style={styles.closeBtn} onClick={onClose}>×</button>
         </div>
 
@@ -181,8 +181,8 @@ const styles = {
   },
   headerTitle: {
     margin: 0,
-    fontSize: "20px",
-    fontWeight: "700",
+    fontSize: "18px",
+    fontWeight: "600",
     color: "#fff",
   },
   closeBtn: {

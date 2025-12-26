@@ -47,7 +47,6 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
 
       fetchAgentSettings();
     } else {
-      // 임시 노드의 경우 기존 데이터 유지
       setRole(node.data?.role ?? "");
       setGoal(node.data?.goal ?? "");
       setBackstory(node.data?.backstory ?? "");
@@ -70,22 +69,18 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
     try {
       const response = await axiosClient.post("/api/v1/agents/save", params);
       
-      // 저장 후 반환된 데이터로 해당 노드만 업데이트
       if (onNodeUpdate) {
         const updatedNodeData = {
           role: role,
           goal: goal,
           backstory: backstory,
           model_id: modelId,
-          dbId: response.data?.id || node.dbId, // 새로 생성된 경우 ID 업데이트
+          dbId: response.data?.id || node.dbId,
         };
         
         console.log("Updating node with data:", updatedNodeData);
         onNodeUpdate(node.id, updatedNodeData);
       }
-      
-      // 전체 플로우를 새로고침하지 않음
-      // await onSaved(); // 이 줄을 제거하거나 조건부로 사용
 
       onClose();
     } catch (err) {
@@ -94,124 +89,291 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
   };
 
   return (
-    <div style={styles.panel}>
-      <h4 style={styles.title}>Agent Settings</h4>
+    <div style={styles.overlay}>
+      <div style={styles.panel}>
+        <div style={styles.header}>
+          <div style={styles.headerContent}>
+            <div style={styles.icon}>👤</div>
+            <h4 style={styles.title}>Agent Settings</h4>
+          </div>
+          <button 
+            style={styles.closeIconBtn} 
+            onClick={onClose}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            ✕
+          </button>
+        </div>
 
-      <label style={styles.label}>Role</label>
-      <input
-        style={styles.input}
-        value={role}
-        onChange={(e) => setRole(e.target.value)}
-      />
+        <div style={styles.divider}></div>
 
-      <label style={styles.label}>Model</label>
-      <select
-        style={styles.select}
-        value={modelId}
-        onChange={(e) => setModelId(e.target.value)}
-      >
-        <option value="">Select Model</option>
-        {modelOptions.map((opt) => (
-          <option key={opt.id} value={opt.id}>
-            {opt.name}
-          </option>
-        ))}
-      </select>
+        <div style={styles.content}>
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Role</label>
+            <input
+              style={styles.input}
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              placeholder="e.g. Senior Data Analyst"
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = '#d1d5db';
+                e.currentTarget.style.backgroundColor = '#fff';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = '#e5e7eb';
+                e.currentTarget.style.backgroundColor = '#fafafa';
+              }}
+            />
+          </div>
 
-      <label style={styles.label}>Goal</label>
-      <textarea
-        style={styles.textarea}
-        value={goal}
-        onChange={(e) => setGoal(e.target.value)}
-        placeholder="Enter goal"
-      />
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Model</label>
+            <select
+              style={styles.select}
+              value={modelId}
+              onChange={(e) => setModelId(e.target.value)}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = '#d1d5db';
+                e.currentTarget.style.backgroundColor = '#fff';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = '#e5e7eb';
+                e.currentTarget.style.backgroundColor = '#fafafa';
+              }}
+            >
+              <option value="">Select Model</option>
+              {modelOptions.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      <label style={styles.label}>Backstory</label>
-      <textarea
-        style={styles.textarea}
-        value={backstory}
-        onChange={(e) => setBackstory(e.target.value)}
-        placeholder="Enter backstory"
-      />
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Goal</label>
+            <textarea
+              style={styles.textarea}
+              value={goal}
+              onChange={(e) => setGoal(e.target.value)}
+              placeholder="Describe the agent's primary objective..."
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = '#d1d5db';
+                e.currentTarget.style.backgroundColor = '#fff';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = '#e5e7eb';
+                e.currentTarget.style.backgroundColor = '#fafafa';
+              }}
+            />
+          </div>
 
-      <button style={styles.saveBtn} onClick={handleSave}>
-        Save
-      </button>
-      <button style={styles.closeBtn} onClick={onClose}>
-        Cancel
-      </button>
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Backstory</label>
+            <textarea
+              style={styles.textarea}
+              value={backstory}
+              onChange={(e) => setBackstory(e.target.value)}
+              placeholder="Provide context and background for the agent..."
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = '#d1d5db';
+                e.currentTarget.style.backgroundColor = '#fff';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = '#e5e7eb';
+                e.currentTarget.style.backgroundColor = '#fafafa';
+              }}
+            />
+          </div>
+        </div>
+
+        <div style={styles.footer}>
+          <button 
+            style={styles.closeBtn} 
+            onClick={onClose}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+          >
+            Cancel
+          </button>
+          <button 
+            style={styles.saveBtn} 
+            onClick={handleSave}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#1a1a1a';
+              e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.12)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'black';
+              e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.08)';
+            }}
+          >
+            Save Changes
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
 const styles = {
+  overlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    zIndex: 998,
+    backdropFilter: "blur(2px)",
+  },
   panel: {
     position: "fixed",
     right: 0,
     top: 0,
-    width: 500,
+    width: 360,
     height: "100vh",
     background: "#fff",
-    padding: 20,
-    boxShadow: "-4px 0 10px rgba(0,0,0,0.1)",
+    boxShadow: "-2px 0 20px rgba(0,0,0,0.08)",
     zIndex: 999,
-    overflowY: "auto",
+    display: "flex",
+    flexDirection: "column",
+  },
+  header: {
+    padding: "16px 18px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerContent: {
+    display: "flex",
+    alignItems: "center",
+    gap: "9px",
+  },
+  icon: {
+    fontSize: "1rem",
+    display: "flex",
+    alignItems: "center",
   },
   title: {
-    marginBottom: 20,
-    fontWeight: "bold",
+    margin: 0,
+    fontWeight: "600",
+    fontSize: "0.875rem",
+    color: "#1a1a1a",
+    letterSpacing: "-0.005em",
+  },
+  closeIconBtn: {
+    background: "transparent",
+    border: "none",
+    fontSize: "0.9375rem",
+    color: "#9ca3af",
+    cursor: "pointer",
+    width: "26px",
+    height: "26px",
+    borderRadius: "5px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "all 0.2s ease",
+    fontWeight: "300",
+  },
+  divider: {
+    height: "1px",
+    backgroundColor: "#f3f4f6",
+    margin: "0 18px",
+  },
+  content: {
+    flex: 1,
+    overflowY: "auto",
+    padding: "18px",
+  },
+  formGroup: {
+    marginBottom: "14px",
   },
   label: {
-    fontSize: 12,
-    marginBottom: 6,
+    fontSize: "0.6875rem",
+    fontWeight: "600",
+    color: "#6b7280",
+    marginBottom: "6px",
     display: "block",
+    letterSpacing: "0.02em",
+    textTransform: "uppercase",
   },
   input: {
     width: "100%",
-    padding: "8px 12px",
-    borderRadius: 6,
-    border: "1px solid #ddd",
-    marginBottom: 10,
+    padding: "8px 11px",
+    borderRadius: "5px",
+    border: "1px solid #e5e7eb",
+    fontSize: "0.75rem",
     boxSizing: "border-box",
+    transition: "all 0.2s ease",
+    fontFamily: "inherit",
+    color: "#1a1a1a",
+    backgroundColor: "#fafafa",
+    outline: "none",
   },
   select: {
     width: "100%",
-    padding: "8px 8px",
-    borderRadius: 6,
-    border: "1px solid #ddd",
-    marginBottom: 10,
+    padding: "8px 11px",
+    borderRadius: "5px",
+    border: "1px solid #e5e7eb",
+    fontSize: "0.75rem",
     boxSizing: "border-box",
-    fontSize: 12,
     fontFamily: "inherit",
+    color: "#1a1a1a",
+    backgroundColor: "#fafafa",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    outline: "none",
   },
   textarea: {
     width: "100%",
-    minHeight: 180,
-    padding: "8px 12px",
-    borderRadius: 6,
-    border: "1px solid #ddd",
-    marginBottom: 10,
+    minHeight: 210,
+    padding: "8px 11px",
+    borderRadius: "5px",
+    border: "1px solid #e5e7eb",
     resize: "vertical",
     boxSizing: "border-box",
     fontFamily: "inherit",
-    fontSize: 12,
+    fontSize: "0.75rem",
+    color: "#1a1a1a",
+    lineHeight: "1.5",
+    transition: "all 0.2s ease",
+    backgroundColor: "#fafafa",
+    outline: "none",
+  },
+  footer: {
+    padding: "14px 18px",
+    borderTop: "1px solid #f3f4f6",
+    display: "flex",
+    gap: "7px",
+    backgroundColor: "#fff",
+  },
+  closeBtn: {
+    flex: 1,
+    padding: "8px 0",
+    background: "#f3f4f6",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+    fontSize: "0.75rem",
+    fontWeight: "500",
+    color: "#6b7280",
+    transition: "all 0.2s ease",
   },
   saveBtn: {
-    width: "100%",
+    flex: 1,
     padding: "8px 0",
-    marginBottom: 8,
     background: "black",
     color: "#fff",
     border: "none",
-    borderRadius: 6,
+    borderRadius: "5px",
     cursor: "pointer",
-  },
-  closeBtn: {
-    width: "100%",
-    padding: "8px 0",
-    background: "#eee",
-    border: "none",
-    borderRadius: 6,
-    cursor: "pointer",
+    fontSize: "0.75rem",
+    fontWeight: "500",
+    boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+    transition: "all 0.2s ease",
+    letterSpacing: "0.01em",
   },
 };
