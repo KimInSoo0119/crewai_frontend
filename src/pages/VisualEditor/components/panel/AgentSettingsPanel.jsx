@@ -8,6 +8,7 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
   const [backstory, setBackstory] = useState("");
   const [modelId, setModelId] = useState("");
   const [modelOptions, setModelOptions] = useState([]);
+  const [tools, setTools] = useState([]);
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("project_id");
 
@@ -26,6 +27,7 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
 
   useEffect(() => {
     if (!node) return;
+
     if (fetchSettings && node.dbId) {
       const fetchAgentSettings = async () => {
         try {
@@ -40,6 +42,7 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
           setGoal(agent.goal ?? "");
           setBackstory(agent.backstory ?? "");
           setModelId(agent.model_id ?? "");
+          setTools(agent.tools ?? []);
         } catch (err) {
           console.error(err);
         }
@@ -51,10 +54,26 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
       setGoal(node.data?.goal ?? "");
       setBackstory(node.data?.backstory ?? "");
       setModelId(node.data?.model_id ?? "");
+      setTools(node.data?.tools ?? []);
     }
   }, [node, fetchSettings, projectId]);
 
-  if (!node) return null;
+
+  const handleDeleteTool = async (toolId) => {
+    if (!node?.dbId) return;
+
+    try {
+      await axiosClient.delete(
+        `/api/v1/agents/${node.dbId}/tools/${toolId}`
+      );
+
+      setTools(prev => prev.filter(t => t.id !== toolId));
+
+    } catch (err) {
+      console.error("Tool delete failed", err);
+    }
+  };
+
 
   const handleSave = async () => {
     const params = {
@@ -68,17 +87,16 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
 
     try {
       const response = await axiosClient.post("/api/v1/agents/save", params);
-      
+
       if (onNodeUpdate) {
         const updatedNodeData = {
-          role: role,
-          goal: goal,
-          backstory: backstory,
+          role,
+          goal,
+          backstory,
           model_id: modelId,
           dbId: response.data?.id || node.dbId,
+          tools: tools
         };
-        
-        console.log("Updating node with data:", updatedNodeData);
         onNodeUpdate(node.id, updatedNodeData);
       }
 
@@ -87,6 +105,8 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
       console.error("Agent save failed", err);
     }
   };
+
+  if (!node) return null;
 
   return (
     <div style={styles.overlay}>
@@ -126,7 +146,7 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
               }}
             />
           </div>
-
+          
           <div style={styles.formGroup}>
             <label style={styles.label}>Model</label>
             <select
@@ -185,6 +205,36 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
                 e.currentTarget.style.backgroundColor = '#fafafa';
               }}
             />
+          </div>
+
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Tools</label>
+
+            {tools.length === 0 ? (
+              <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
+                No tools assigned. Drag a tool into this agent.
+              </div>
+            ) : (
+              <ul style={{ paddingLeft: 0, margin: 0 }}>
+                {tools.map((tool, idx) => (
+                  <li
+                    key={tool.id ?? idx}
+                    style={styles.toolItem}
+                  >
+                    <span>{tool.name}</span>
+
+                    <button
+                      style={styles.toolDeleteBtn}
+                      onClick={() => handleDeleteTool(tool.id)}
+                      onMouseEnter={(e)=>e.currentTarget.style.backgroundColor="#f3f4f6"}
+                      onMouseLeave={(e)=>e.currentTarget.style.backgroundColor="transparent"}
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 
@@ -375,5 +425,29 @@ const styles = {
     boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
     transition: "all 0.2s ease",
     letterSpacing: "0.01em",
+  },
+  toolItem: {
+    listStyle: "none",
+    padding: "10px 12px",
+    borderRadius: "6px",
+    border: "1px solid #e5e7eb",
+    marginBottom: "6px",
+    backgroundColor: "#fff",
+    fontSize: "0.75rem",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+  },
+
+  toolDeleteBtn: {
+    border: "none",
+    background: "transparent",
+    cursor: "pointer",
+    padding: "4px 6px",
+    borderRadius: "4px",
+    color: "#9ca3af",
+    fontSize: "0.75rem",
+    transition: "all 0.2s ease",
   },
 };

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
 import {
   ReactFlow,
   useReactFlow,
@@ -14,6 +13,7 @@ import TaskNode from "../nodes/TaskNode";
 import AgentSettingsPanel from "../panel/AgentSettingsPanel";
 import TaskSettingsPanel from "../panel/TaskSettingsPanel";
 import "@xyflow/react/dist/style.css";
+import axiosClient from "../../../../api/axiosClient";
 
 const nodeTypes = {
   agent: AgentNode,
@@ -26,8 +26,6 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
   const [selectedNode, setSelectedNode] = useState(null);
   const [isFetchingSettings, setIsFetchingSettings] = useState(false);
   const { screenToFlowPosition } = useReactFlow();
-  const [searchParams] = useSearchParams();
-  const projectId = searchParams.get("project_id");
   const initializedRef = useRef(false);
   const edgeReconnectSuccessful = useRef(true);
 
@@ -89,6 +87,19 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
       );
     }
   }, [setNodes, setEdges]);
+
+  const deleteNode = useCallback((nodeId) => {
+    setNodes((nds) => nds.filter((n) => String(n.id) !== String(nodeId)));
+
+    setEdges((eds) => eds.filter(
+      (e) => String(e.source) !== String(nodeId) && String(e.target) !== String(nodeId)
+    ));
+    
+    if (selectedNode && String(selectedNode.id) === String(nodeId)) {
+      setSelectedNode(null);
+      setIsFetchingSettings(false);
+    }
+  }, [setNodes, setEdges, selectedNode]);
 
   const openSettings = useCallback((node) => {
     setSelectedNode(node);
@@ -193,37 +204,108 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
     [setEdges]
   );
 
+  // const onDrop = useCallback(
+  //   (event) => {
+  //     event.preventDefault();
+
+  //     const type = event.dataTransfer.getData("application/reactflow");
+  //     if (!type) return;
+
+  //     const position = screenToFlowPosition({
+  //       x: event.clientX,
+  //       y: event.clientY,
+  //     });
+
+  //     let nodeData = {};
+
+  //     if (type === 'agent') {
+  //       nodeData = {role: "newNode"}
+  //     } else {
+  //       nodeData = {name: "newNode"}
+  //     }
+
+  //     const newNode = {
+  //       id: `tmp-${Date.now()}`,
+  //       type,
+  //       position,
+  //       data: nodeData
+  //     };
+
+  //     setNodes((nds) => nds.concat(newNode));
+  //   },
+  //   [screenToFlowPosition, setNodes]
+  // );
+
   const onDrop = useCallback(
-    (event) => {
-      event.preventDefault();
+  async (event) => {
+    event.preventDefault();
 
-      const type = event.dataTransfer.getData("application/reactflow");
-      if (!type) return;
+    const type = event.dataTransfer.getData("application/reactflow");
+    if (!type) return;
 
-      const position = screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
+    const position = screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY,
+    });
 
-      let nodeData = {};
+    const targetNode = nodes.find(
+      (node) =>
+        position.x >= node.position.x &&
+        position.x <= node.position.x + 250 &&
+        position.y >= node.position.y &&
+        position.y <= node.position.y + 120
+    );
 
-      if (type === 'agent') {
-        nodeData = {role: "newNode"}
-      } else {
-        nodeData = {name: "newNode"}
+    if (type === "GmailTool") {
+      if (!targetNode || targetNode.type !== "agent") {
+        alert("GmailTool은 Agent에만 추가할 수 있습니다.");
+        return;
       }
 
-      const newNode = {
-        id: `tmp-${Date.now()}`,
-        type,
-        position,
-        data: nodeData
-      };
+      const newTool = { name: "GmailTool", config: {} };
+      const alreadyHas = (targetNode.data.tools || []).some(
+        (t) => t.name === "GmailTool"
+      );
+      if (alreadyHas) {
+        alert("이미 GmailTool이 추가된 Agent입니다.");
+        return;
+      }
 
-      setNodes((nds) => nds.concat(newNode));
-    },
-    [screenToFlowPosition, setNodes]
-  );
+      const updatedTools = [...(targetNode.data.tools || []), newTool];
+      updateNodeData(targetNode.id, { tools: updatedTools });
+
+      try {
+        await axiosClient.post("/api/v1/agents/tools/save", {
+          agent_id: targetNode.data.id, 
+          tool: newTool,
+        });
+      } catch (error) {
+        console.error("Tool 저장 실패:", error);
+        alert("서버 저장 실패!");
+      }
+
+      return;
+    }
+
+    let nodeData = {};
+    if (type === "agent") {
+      nodeData = { role: "newNode", tools: [] };
+    } else {
+      nodeData = { name: "newNode" };
+    }
+
+    const newNode = {
+      id: `tmp-${Date.now()}`,
+      type,
+      position,
+      data: nodeData,
+    };
+
+    setNodes((nds) => nds.concat(newNode));
+  },
+  [nodes, screenToFlowPosition, setNodes, updateNodeData]
+);
+
 
   const onDragOver = (event) => {
     event.preventDefault();
@@ -244,6 +326,9 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
           onReconnectEnd={onReconnectEnd}
           nodeTypes={nodeTypes}
           onNodeClick={(event, node) => openSettings(node)}
+          onNodesDelete={(deletedNodes) => {
+            deletedNodes.forEach((node) => deleteNode(node.id));
+          }}
           reconnectRadius={20}
         >
           <Background />
@@ -255,6 +340,7 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
           node={selectedNode}
           fetchSettings={isFetchingSettings}
           onNodeUpdate={updateNodeData}
+          onNodeDelete={deleteNode}
           onClose={() => {
             setSelectedNode(null);
             setIsFetchingSettings(false);
@@ -267,6 +353,7 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
           node={selectedNode}
           fetchSettings={isFetchingSettings}
           onNodeUpdate={updateNodeData}
+          onNodeDelete={deleteNode}
           onClose={() => {
             setSelectedNode(null);
             setIsFetchingSettings(false);

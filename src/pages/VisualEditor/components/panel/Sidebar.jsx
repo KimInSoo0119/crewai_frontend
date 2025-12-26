@@ -79,7 +79,9 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
     setResultData(null);
 
     try {
-      const params = buildExecuteFlowParams(flowData.nodes, flowData.edges, projectId)
+      const params = buildExecuteFlowParams(flowData.nodes, flowData.edges, projectId);
+      console.log("Execute params:", params); 
+      
       const res = await axiosClient.post("/api/v1/crew/flow/execute", params);
       const executionId = res.data?.execution_id;
       
@@ -148,6 +150,20 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
                 <div style={styles.menuItemContent}>
                   <span style={styles.menuItemIcon}>📋</span>
                   <span>Task</span>
+                </div>
+              </MenuItem>
+            </SubMenu>
+            <SubMenu label="Tools" style={styles.subMenuLabel}>
+              <MenuItem
+                style={styles.menuItem}
+                draggable
+                onDragStart={(e) => onDragStart(e, "GmailTool")}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fff'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fafafa'}
+              >
+                <div style={styles.menuItemContent}>
+                  <span style={styles.menuItemIcon}>✉️</span>
+                  <span>GmailTool</span>
                 </div>
               </MenuItem>
             </SubMenu>

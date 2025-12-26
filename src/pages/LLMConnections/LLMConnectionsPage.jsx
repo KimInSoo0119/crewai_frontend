@@ -303,7 +303,6 @@ const styles = {
     borderRadius: "7px",
     border: "none",
     backgroundColor: "#ddd",
-    cursor: "pointer",
     marginRight: "14px",
     userSelect: "none",
     boxShadow: "0 1px 3px rgba(0,0,0,0.12)",

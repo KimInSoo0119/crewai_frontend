@@ -1,9 +1,31 @@
-import { Handle, Position } from "@xyflow/react";
+import { Handle, Position, useReactFlow } from "@xyflow/react";
 
-export default function AgentNode({ data }) {
+export default function AgentNode({ data, id }) {
+  const { deleteElements } = useReactFlow();
+
+  const handleDelete = (e) => {
+    e.stopPropagation();
+    deleteElements({ nodes: [{ id }] });
+  };
+
   return (
     <div style={styles.container}>
       <div style={styles.headerBar}></div>
+      <button
+        onClick={handleDelete}
+        style={styles.deleteButton}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = '#dc2626';
+          e.currentTarget.style.transform = 'scale(1.1)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = '#ef4444';
+          e.currentTarget.style.transform = 'scale(1)';
+        }}
+        title="노드 삭제"
+      >
+        ×
+      </button>
       <div style={styles.content}>
         <div style={styles.iconWrapper}>
           <span style={styles.icon}>👤</span>
@@ -57,6 +79,28 @@ const styles = {
     height: "4px",
     background: "linear-gradient(90deg, #ef4444 0%, #dc2626 100%)",
     width: "100%",
+  },
+  deleteButton: {
+    position: "absolute",
+    top: "8px",
+    right: "8px",
+    width: "20px",
+    height: "20px",
+    borderRadius: "50%",
+    border: "none",
+    background: "#ef4444",
+    color: "#fff",
+    fontSize: "16px",
+    fontWeight: "bold",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+    transition: "all 0.2s ease",
+    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+    lineHeight: "1",
+    padding: 0,
   },
   content: {
     padding: "14px 16px",

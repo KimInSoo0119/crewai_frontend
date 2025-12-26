@@ -31,7 +31,7 @@ export default function Sidebar() {
 const styles = {
   sidebar: {
     height: "100vh",
-    backgroundColor: "#2a2a2a",
+    backgroundColor: "#006F6F", 
     borderRight: "1px solid #ffffff",
     overflow: "hidden",
     margin: 0,
@@ -89,14 +89,14 @@ const styles = {
     fontSize: "14px",
   },
   active: {
-    fontWeight: "600",
-    textDecoration: "none",
-    color: "#000000",
-    backgroundColor: "#ffffff",
-    width: "100%",
-    display: "block",
-    borderRadius: "0",
-    padding: "14px 24px",
-    fontSize: "14px",
-  },
+  fontWeight: "600",
+  textDecoration: "none",
+  color: "#006F6F",     
+  backgroundColor: "#ffffff", 
+  width: "100%",
+  display: "block",
+  borderRadius: "0",
+  padding: "14px 24px",
+  fontSize: "14px",
+},
 };
