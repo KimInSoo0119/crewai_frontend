@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import ExecutionPopup from "../popup/ExecutionPopup";
 import { poll } from "../../../../utils/polling";
 import axiosClient from "../../../../api/axiosClient";
+import { normalizeModuleId } from "vite/module-runner";
 
 export default function Sidebar({ collapsed, onToggle, flowData }) {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -22,7 +23,8 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
             model_id: node.data?.model_id ?? null,
             role: node.data?.role ?? "",
             backstory: node.data?.backstory ?? "",
-            goal: node.data?.goal ?? ""
+            goal: node.data?.goal ?? "",
+            tools: node.data?.tools ?? null
           };
           break;
         default:
@@ -154,6 +156,18 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
               </MenuItem>
             </SubMenu>
             <SubMenu label="Tools" style={styles.subMenuLabel}>
+              <MenuItem
+                style={styles.menuItem}
+                draggable
+                onDragStart={(e) => onDragStart(e, "WebSearchTool")}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fff'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fafafa'}
+              >
+                <div style={styles.menuItemContent}>
+                  <span style={styles.menuItemIcon}>🔍</span>
+                  <span>WebSearchTool</span>
+                </div>
+              </MenuItem>
               <MenuItem
                 style={styles.menuItem}
                 draggable

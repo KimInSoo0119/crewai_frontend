@@ -204,108 +204,77 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
     [setEdges]
   );
 
-  // const onDrop = useCallback(
-  //   (event) => {
-  //     event.preventDefault();
-
-  //     const type = event.dataTransfer.getData("application/reactflow");
-  //     if (!type) return;
-
-  //     const position = screenToFlowPosition({
-  //       x: event.clientX,
-  //       y: event.clientY,
-  //     });
-
-  //     let nodeData = {};
-
-  //     if (type === 'agent') {
-  //       nodeData = {role: "newNode"}
-  //     } else {
-  //       nodeData = {name: "newNode"}
-  //     }
-
-  //     const newNode = {
-  //       id: `tmp-${Date.now()}`,
-  //       type,
-  //       position,
-  //       data: nodeData
-  //     };
-
-  //     setNodes((nds) => nds.concat(newNode));
-  //   },
-  //   [screenToFlowPosition, setNodes]
-  // );
-
   const onDrop = useCallback(
-  async (event) => {
-    event.preventDefault();
+    async (event) => {
+      event.preventDefault();
 
-    const type = event.dataTransfer.getData("application/reactflow");
-    if (!type) return;
+      const type = event.dataTransfer.getData("application/reactflow");
+      if (!type) return;
 
-    const position = screenToFlowPosition({
-      x: event.clientX,
-      y: event.clientY,
-    });
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
 
-    const targetNode = nodes.find(
-      (node) =>
-        position.x >= node.position.x &&
-        position.x <= node.position.x + 250 &&
-        position.y >= node.position.y &&
-        position.y <= node.position.y + 120
-    );
+      if (type.endsWith("Tool")) {
+        const targetNode = nodes.find(
+          (node) =>
+            position.x >= node.position.x &&
+            position.x <= node.position.x + 250 &&
+            position.y >= node.position.y &&
+            position.y <= node.position.y + 120
+        );
 
-    if (type === "GmailTool") {
-      if (!targetNode || targetNode.type !== "agent") {
-        alert("GmailTool은 Agent에만 추가할 수 있습니다.");
+        if (!targetNode || targetNode.type !== "agent") {
+          alert(`${type}은 Agent 노드 위에만 추가할 수 있습니다.`);
+          return;
+        }
+
+        const newTool = { name: type };
+        const alreadyHas = (targetNode.data.tools || []).some(
+          (t) => t.name === type
+        );
+        
+        if (alreadyHas) {
+          alert(`이미 ${type}이 추가된 Agent입니다.`);
+          return;
+        }
+
+        const updatedTools = [...(targetNode.data.tools || []), newTool];
+        updateNodeData(targetNode.id, { tools: updatedTools });
+
+        try {
+          await axiosClient.post("/api/v1/agents/tools/save", {
+            agent_id: targetNode.data.id,
+            tool: newTool,
+          });
+          console.log(`${type} 저장 완료`);
+        } catch (error) {
+          console.error("Tool 저장 실패:", error);
+          alert("서버 저장 실패!");
+        }
+
         return;
       }
 
-      const newTool = { name: "GmailTool", config: {} };
-      const alreadyHas = (targetNode.data.tools || []).some(
-        (t) => t.name === "GmailTool"
-      );
-      if (alreadyHas) {
-        alert("이미 GmailTool이 추가된 Agent입니다.");
-        return;
+      let nodeData = {};
+      if (type === "agent") {
+        nodeData = { role: "newNode", tools: [] };
+      } else {
+        nodeData = { name: "newNode" };
       }
 
-      const updatedTools = [...(targetNode.data.tools || []), newTool];
-      updateNodeData(targetNode.id, { tools: updatedTools });
+      const newNode = {
+        id: `tmp-${Date.now()}`,
+        type,
+        position,
+        data: nodeData,
+      };
 
-      try {
-        await axiosClient.post("/api/v1/agents/tools/save", {
-          agent_id: targetNode.data.id, 
-          tool: newTool,
-        });
-      } catch (error) {
-        console.error("Tool 저장 실패:", error);
-        alert("서버 저장 실패!");
-      }
-
-      return;
-    }
-
-    let nodeData = {};
-    if (type === "agent") {
-      nodeData = { role: "newNode", tools: [] };
-    } else {
-      nodeData = { name: "newNode" };
-    }
-
-    const newNode = {
-      id: `tmp-${Date.now()}`,
-      type,
-      position,
-      data: nodeData,
-    };
-
-    setNodes((nds) => nds.concat(newNode));
-  },
-  [nodes, screenToFlowPosition, setNodes, updateNodeData]
-);
-
+      setNodes((nds) => nds.concat(newNode));
+    },
+    [nodes, screenToFlowPosition, setNodes, updateNodeData]
+  );
 
   const onDragOver = (event) => {
     event.preventDefault();

@@ -59,18 +59,27 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
   }, [node, fetchSettings, projectId]);
 
 
-  const handleDeleteTool = async (toolId) => {
-    if (!node?.dbId) return;
+  const handleDeleteTool = async (toolId, toolName) => {
+    if (!node?.dbId) {
+      alert("Agent가 저장되지 않아 Tool을 삭제할 수 없습니다.");
+      return;
+    }
 
     try {
-      await axiosClient.delete(
-        `/api/v1/agents/${node.dbId}/tools/${toolId}`
-      );
+      const params = { agent_id: node.dbId, tool_name: toolName };
+      await axiosClient.post("/api/v1/agents/tools/del", params);
 
-      setTools(prev => prev.filter(t => t.id !== toolId));
+      const updatedTools = tools.filter(t => t.id !== toolId);
+      setTools(updatedTools);
 
+      if (onNodeUpdate) {
+        onNodeUpdate(node.id, { tools: updatedTools });
+      }
+
+      console.log("Tool 삭제 완료:", toolName);
     } catch (err) {
       console.error("Tool delete failed", err);
+      alert("Tool 삭제에 실패했습니다.");
     }
   };
 
@@ -225,7 +234,7 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
 
                     <button
                       style={styles.toolDeleteBtn}
-                      onClick={() => handleDeleteTool(tool.id)}
+                      onClick={() => handleDeleteTool(tool.id, tool.name)}
                       onMouseEnter={(e)=>e.currentTarget.style.backgroundColor="#f3f4f6"}
                       onMouseLeave={(e)=>e.currentTarget.style.backgroundColor="transparent"}
                     >
