@@ -50,6 +50,18 @@ export default function AgentNode({ data, id }) {
               </span>
             </div>
           )}
+          {data.tools && data.tools.length > 0 && (
+            <div style={styles.info}>
+              <span style={styles.label}>Tools</span>
+              <div style={styles.toolsContainer}>
+                {data.tools.map((tool, index) => (
+                  <span key={index} style={styles.toolBadge}>
+                    {tool.name || tool}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
       
@@ -154,6 +166,23 @@ const styles = {
     color: "#6b7280",
     lineHeight: "1.4",
     wordBreak: "break-word",
+  },
+  toolsContainer: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "4px",
+    marginTop: "2px",
+  },
+  toolBadge: {
+    fontSize: "0.625rem",
+    padding: "2px 6px",
+    background: "linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)",
+    color: "#991b1b",
+    borderRadius: "4px",
+    border: "1px solid #fca5a5",
+    fontWeight: "500",
+    whiteSpace: "nowrap",
+    lineHeight: "1.2",
   },
   handle: {
     width: "8px",

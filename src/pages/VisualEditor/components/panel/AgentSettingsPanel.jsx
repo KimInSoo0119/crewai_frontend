@@ -47,7 +47,6 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
           console.error(err);
         }
       };
-
       fetchAgentSettings();
     } else {
       setRole(node.data?.role ?? "");
@@ -57,7 +56,6 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
       setTools(node.data?.tools ?? []);
     }
   }, [node, fetchSettings, projectId]);
-
 
   const handleDeleteTool = async (toolId, toolName) => {
     if (!node?.dbId) {
@@ -69,7 +67,7 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
       const params = { agent_id: node.dbId, tool_name: toolName };
       await axiosClient.post("/api/v1/agents/tools/del", params);
 
-      const updatedTools = tools.filter(t => t.id !== toolId);
+      const updatedTools = tools.filter(t => t.name !== toolName);
       setTools(updatedTools);
 
       if (onNodeUpdate) {
@@ -82,7 +80,6 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
       alert("Tool 삭제에 실패했습니다.");
     }
   };
-
 
   const handleSave = async () => {
     const params = {
@@ -388,7 +385,7 @@ const styles = {
   },
   textarea: {
     width: "100%",
-    minHeight: 210,
+    minHeight: 180,
     padding: "8px 11px",
     borderRadius: "5px",
     border: "1px solid #e5e7eb",
@@ -448,7 +445,6 @@ const styles = {
     justifyContent: "space-between",
     boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
   },
-
   toolDeleteBtn: {
     border: "none",
     background: "transparent",

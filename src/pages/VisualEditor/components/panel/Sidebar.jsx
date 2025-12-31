@@ -4,7 +4,6 @@ import { useSearchParams } from "react-router-dom";
 import ExecutionPopup from "../popup/ExecutionPopup";
 import { poll } from "../../../../utils/polling";
 import axiosClient from "../../../../api/axiosClient";
-import { normalizeModuleId } from "vite/module-runner";
 
 export default function Sidebar({ collapsed, onToggle, flowData }) {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -171,13 +170,25 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
               <MenuItem
                 style={styles.menuItem}
                 draggable
-                onDragStart={(e) => onDragStart(e, "GmailTool")}
+                onDragStart={(e) => onDragStart(e, "YoutubeChannelTool")}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fff'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fafafa'}
               >
                 <div style={styles.menuItemContent}>
-                  <span style={styles.menuItemIcon}>✉️</span>
-                  <span>GmailTool</span>
+                  <span style={styles.menuItemIcon}>📺</span>
+                  <span>YoutubeChannelTool</span>
+                </div>
+              </MenuItem>
+              <MenuItem
+                style={styles.menuItem}
+                draggable
+                onDragStart={(e) => onDragStart(e, "GithubSearchTool")}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fff'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fafafa'}
+              >
+                <div style={styles.menuItemContent}>
+                  <span style={styles.menuItemIcon}>🐙</span>
+                  <span>GithubSearchTool</span>
                 </div>
               </MenuItem>
             </SubMenu>
