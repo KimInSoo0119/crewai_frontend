@@ -1,4 +1,4 @@
-export async function poll({ func, interval = 3000, maxAttempts = 10, checkDone, onProgress }) {
+export async function poll({ func, interval = 2000, maxAttempts = 50, checkDone, onProgress }) {
     let attempts = 0;
 
     return new Promise((resolve, reject) => {

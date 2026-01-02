@@ -107,7 +107,6 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
           return res.data?.status === true;
         },
         onProgress: (res) => {
-          // 중간 결과 업데이트
           const statusData = res.data;
           console.log("Progress update:", statusData);
           
