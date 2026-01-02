@@ -8,6 +8,9 @@ import axiosClient from "../../../../api/axiosClient";
 export default function Sidebar({ collapsed, onToggle, flowData }) {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [resultData, setResultData] = useState(null);
+  const [completedTasks, setCompletedTasks] = useState([]);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [agentHierarchy, setAgentHierarchy] = useState([]); 
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("project_id");
 
@@ -78,34 +81,86 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
 
     setIsPopupOpen(true);
     setResultData(null);
+    setCompletedTasks([]);
+    setAgentHierarchy([]);
+    setIsExecuting(true);
 
     try {
-      const params = buildExecuteFlowParams(flowData.nodes, flowData.edges, projectId);
-      console.log("Execute params:", params); 
+      const params = buildExecuteFlowParams(flowData.nodes, flowData.edges, projectId); 
+      const executeRes = await axiosClient.post("/api/v1/crew/flow/execute", params);
+      console.log("Execute response:", executeRes.data);
       
-      const res = await axiosClient.post("/api/v1/crew/flow/execute", params);
-      const executionId = res.data?.execution_id;
+      const executionId = executeRes.data?.execution_id;
       
-      const res_ = await poll({
+      if (!executionId) {
+        throw new Error("execution_id를 받지 못했습니다.");
+      }
+      
+      console.log("Execution ID:", executionId);
+      
+      const finalRes = await poll({
         func: () => axiosClient.get(`/api/v1/crew/flow/status/${executionId}`),
-        interval: 8000,
-        maxAttempts: 10,
-        checkDone: (res) => res.data[0]?.status === true
-      })
+        interval: 2000,
+        maxAttempts: 50,
+        checkDone: (res) => {
+          console.log("Poll response:", res.data);
+          return res.data?.status === true;
+        },
+        onProgress: (res) => {
+          // 중간 결과 업데이트
+          const statusData = res.data;
+          console.log("Progress update:", statusData);
+          
+          if (statusData?.result) {
+            // workflow 업데이트
+            if (statusData.result.workflow) {
+              const workflows = statusData.result.workflow;
+              console.log("Updating completed tasks:", workflows);
+              setCompletedTasks([...workflows]);
+            }
+            
+            // agent_hierarchy 업데이트
+            if (statusData.result.agent_hierarchy) {
+              console.log("Updating agent hierarchy:", statusData.result.agent_hierarchy);
+              setAgentHierarchy([...statusData.result.agent_hierarchy]);
+            }
+          }
+        }
+      });
 
-      setResultData(res_.data[0].result)
+      const finalResult = finalRes.data?.result;
+      
+      if (!finalResult) {
+        console.error("No result in final response:", finalRes.data);
+        throw new Error("결과 데이터를 받지 못했습니다.");
+      }
+      setResultData(finalResult);
+      setCompletedTasks(finalResult.workflow || []);
+      setAgentHierarchy(finalResult.agent_hierarchy || []); 
+      setIsExecuting(false);
+      
+      console.log("Result data set successfully");
+      
     } catch (error) {
       console.error("Failed to execute flow:", error);
-      alert("실행 중 오류가 발생했습니다.");
+      console.error("Error details:", error.response?.data);
+      
+      alert(`실행 중 오류가 발생했습니다: ${error.message}`);
 
       setIsPopupOpen(false);
       setResultData(null);
+      setCompletedTasks([]);
+      setAgentHierarchy([]);
+      setIsExecuting(false);
     }
   };
 
   const handleClose = () => {
     setIsPopupOpen(false);
     setResultData(null);
+    setCompletedTasks([]);
+    setAgentHierarchy([]); 
+    setIsExecuting(false);
   }
 
   const onDragStart = (e, type) => {
@@ -197,19 +252,30 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
 
         <div style={styles.footer}>
           <button
-            style={styles.executeButton}
+            style={{
+              ...styles.executeButton,
+              opacity: isExecuting ? 0.6 : 1,
+              cursor: isExecuting ? 'not-allowed' : 'pointer'
+            }}
             onClick={handleExecute}
+            disabled={isExecuting}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#1a1a1a';
-              e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.12)';
+              if (!isExecuting) {
+                e.currentTarget.style.backgroundColor = '#1a1a1a';
+                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.12)';
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#000';
-              e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.08)';
+              if (!isExecuting) {
+                e.currentTarget.style.backgroundColor = '#000';
+                e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.08)';
+              }
             }}
           >
-            <span style={styles.executeIcon}>▶</span>
-            <span>Execute Flow</span>
+            <span style={styles.executeIcon}>
+              {isExecuting ? '⏳' : '▶'}
+            </span>
+            <span>{isExecuting ? 'Executing...' : 'Execute Flow'}</span>
           </button>
         </div>
       </ProSidebar>
@@ -230,9 +296,11 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
       <ExecutionPopup
         isOpen={isPopupOpen}
         onClose={handleClose}
-        event={resultData?.agent_hierarchy}
+        event={isExecuting ? agentHierarchy : (resultData?.agent_hierarchy || agentHierarchy)}
         workflow={resultData?.workflow}
         finalOutput={resultData?.final_output}
+        completedTasks={completedTasks}
+        isExecuting={isExecuting}
       />
     </div>
   );

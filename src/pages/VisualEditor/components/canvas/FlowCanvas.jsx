@@ -7,6 +7,7 @@ import {
   useEdgesState,
   addEdge,
   reconnectEdge,
+  MarkerType,
 } from "@xyflow/react";
 import AgentNode from "../nodes/AgentNode";
 import TaskNode from "../nodes/TaskNode";
@@ -20,11 +21,23 @@ const nodeTypes = {
   task: TaskNode,
 };
 
+const defaultEdgeOptions = {
+  markerEnd: {
+    type: MarkerType.ArrowClosed,
+    width: 20,
+    height: 20,
+  },
+  style: {
+    strokeWidth: 1.5,
+  },
+};
+
 export default function FlowCanvas({ setFlowData, initialFlow }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialFlow?.nodes || []);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialFlow?.edges || []);
   const [selectedNode, setSelectedNode] = useState(null);
   const [isFetchingSettings, setIsFetchingSettings] = useState(false);
+  const [isDraggingTool, setIsDraggingTool] = useState(false);
   const { screenToFlowPosition } = useReactFlow();
   const initializedRef = useRef(false);
   const edgeReconnectSuccessful = useRef(true);
@@ -37,7 +50,16 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
 
     if (!initializedRef.current && hasInitialData) {
       setNodes(initialFlow.nodes || []);
-      setEdges(initialFlow.edges || []);
+      // 기존 엣지에도 화살표 추가
+      const edgesWithArrows = (initialFlow.edges || []).map(edge => ({
+        ...edge,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: 20,
+          height: 20,
+        },
+      }));
+      setEdges(edgesWithArrows);
       initializedRef.current = true;
     }
   }, [initialFlow, setNodes, setEdges]);
@@ -47,6 +69,43 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
       setFlowData({ nodes, edges });
     }
   }, [nodes, edges, setFlowData]);
+
+  // Tool 드래그 중일 때 Agent 노드 하이라이트
+  useEffect(() => {
+    if (isDraggingTool) {
+      setNodes((nds) =>
+        nds.map((node) => ({
+          ...node,
+          data: {
+            ...node.data,
+            isDropTarget: node.type === "agent",
+          },
+        }))
+      );
+    } else {
+      setNodes((nds) =>
+        nds.map((node) => ({
+          ...node,
+          data: {
+            ...node.data,
+            isDropTarget: false,
+          },
+        }))
+      );
+    }
+  }, [isDraggingTool, setNodes]);
+
+  // 전역 dragend 이벤트 리스너 추가
+  useEffect(() => {
+    const handleDragEnd = () => {
+      setIsDraggingTool(false);
+    };
+
+    window.addEventListener('dragend', handleDragEnd);
+    return () => {
+      window.removeEventListener('dragend', handleDragEnd);
+    };
+  }, []);
 
   const updateNodeData = useCallback((nodeId, newData) => {
     console.log("updateNodeData called with:", { nodeId, newData });
@@ -157,7 +216,17 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
         return;
       }
 
-      setEdges((eds) => addEdge(params, eds));
+      // 연결할 때 화살표 추가
+      const newEdge = {
+        ...params,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: 20,
+          height: 20,
+        },
+      };
+
+      setEdges((eds) => addEdge(newEdge, eds));
     },
     [nodes, setEdges, validateConnection]
   );
@@ -207,12 +276,13 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
   const onDrop = useCallback(
     async (event) => {
       event.preventDefault();
+      setIsDraggingTool(false);
 
       const type = event.dataTransfer.getData("application/reactflow");
       if (!type) return;
 
       const position = screenToFlowPosition({
-        x: event.clientX,
+        x: event.clientX, 
         y: event.clientY,
       });
 
@@ -225,8 +295,8 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
             position.y <= node.position.y + 120
         );
 
+        // Agent 노드가 아니면 조용히 무시
         if (!targetNode || targetNode.type !== "agent") {
-          alert(`${type}은 Agent 노드 위에만 추가할 수 있습니다.`);
           return;
         }
 
@@ -281,9 +351,33 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
     event.dataTransfer.dropEffect = "move";
   };
 
+  const onDragEnter = (event) => {
+    event.preventDefault();
+    const hasData = event.dataTransfer.types.includes("application/reactflow");
+    if (hasData) {
+      setIsDraggingTool(true);
+    }
+  };
+
+  const onDragLeave = (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX;
+    const y = event.clientY;
+    
+    if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
+      setIsDraggingTool(false);
+    }
+  };
+
   return (
     <div style={styles.container}>
-      <div style={{ flex: 1 }} onDrop={onDrop} onDragOver={onDragOver}>
+      <div 
+        style={{ flex: 1 }} 
+        onDrop={onDrop} 
+        onDragOver={onDragOver}
+        onDragEnter={onDragEnter}
+        onDragLeave={onDragLeave}
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -294,6 +388,7 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
           onReconnectStart={onReconnectStart}
           onReconnectEnd={onReconnectEnd}
           nodeTypes={nodeTypes}
+          defaultEdgeOptions={defaultEdgeOptions}
           onNodeClick={(event, node) => openSettings(node)}
           onNodesDelete={(deletedNodes) => {
             deletedNodes.forEach((node) => deleteNode(node.id));
