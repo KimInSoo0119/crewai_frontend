@@ -106,7 +106,7 @@ export default function ExecutionPopup({
                             >
                               <div style={styles.taskBullet}>●</div>
                               <div style={styles.taskDescription}>
-                                {task.name || task.description || `Task ${taskIdx + 1}`}
+                                {task.description || `Task ${taskIdx + 1}`}
                               </div>
                             </div>
                           ))
@@ -285,6 +285,8 @@ const styles = {
     borderRight: "1px solid #e8e8e8",
     overflowY: "auto",
     backgroundColor: "#f8f9fa",
+    display: "flex",
+    flexDirection: "column",
   },
   rightPanel: {
     flex: 1,
@@ -314,6 +316,9 @@ const styles = {
   hierarchyList: {
     fontSize: "14px",
     padding: "16px",
+    display: "flex",
+    flexDirection: "column",
+    flex: 1,
   },
   agentGroup: {
     marginBottom: "12px",
@@ -386,13 +391,15 @@ const styles = {
     fontStyle: "italic",
   },
   emptyMessage: {
-    padding: "40px 20px",
+    padding: "20px 20px 40px 20px",
     textAlign: "center",
     color: "#999",
     fontSize: "14px",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
   },
   emptySpinner: {
     width: "40px",
@@ -404,6 +411,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     padding: "60px 20px",
+    minHeight: "400px",
   },
   spinner: {
     width: "40px",
