@@ -100,8 +100,8 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
       
       const finalRes = await poll({
         func: () => axiosClient.get(`/api/v1/crew/flow/status/${executionId}`),
-        interval: 2000,
-        maxAttempts: 50,
+        interval: 3000,
+        maxAttempts: 100,
         checkDone: (res) => {
           console.log("Poll response:", res.data);
           return res.data?.status === true;
