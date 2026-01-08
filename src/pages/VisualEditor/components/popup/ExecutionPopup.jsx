@@ -175,7 +175,7 @@ export default function ExecutionPopup({
                       </h4>
                       <div style={styles.sectionContent}>
                         <ReactMarkdown>
-                          {task.output?.description || task.description || "설명이 없습니다."}
+                          {task.output?.summary || task.summary || "설명이 없습니다."}
                         </ReactMarkdown>
                       </div>
                     </div>
