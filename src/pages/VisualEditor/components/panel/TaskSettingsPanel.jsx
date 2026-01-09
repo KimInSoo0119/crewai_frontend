@@ -46,6 +46,7 @@ export default function TaskSettingsPanel({node, fetchSettings, onClose, onNodeU
       name,
       description,
       expected_output: expectedOutput,
+      position: node.position || { x: 0, y: 0 },
     };
 
     try {

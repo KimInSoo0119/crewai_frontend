@@ -89,6 +89,7 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
       goal,
       backstory,
       model_id: Number(modelId),
+      position: node.position || { x: 0, y: 0 },
     };
 
     try {
