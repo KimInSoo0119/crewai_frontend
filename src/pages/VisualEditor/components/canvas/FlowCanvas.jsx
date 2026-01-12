@@ -145,6 +145,22 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
         }))
       );
     }
+    
+    // selectedNode도 업데이트
+    setSelectedNode((prev) => {
+      if (prev && String(prev.id) === String(oldNodeId)) {
+        return {
+          ...prev,
+          id: newNodeId,
+          data: {
+            ...prev.data,
+            ...newData,
+          },
+          dbId: newData.dbId || prev.dbId,
+        };
+      }
+      return prev;
+    });
   }, [setNodes, setEdges]);
 
   const deleteNode = useCallback((nodeId) => {
@@ -310,12 +326,45 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
           return;
         }
 
+        // dbId 확인 (노드의 dbId 또는 data.dbId 모두 체크)
+        let agentId = targetNode.dbId || targetNode.data?.dbId;
+
+        // Agent가 저장되지 않은 경우 먼저 저장
+        if (!agentId) {
+          try {
+            const saveResponse = await axiosClient.post("/api/v1/agents/save", {
+              id: null,
+              project_id: Number(new URLSearchParams(window.location.search).get("project_id")),
+              role: targetNode.data.role || "New Agent",
+              goal: targetNode.data.goal || "",
+              backstory: targetNode.data.backstory || "",
+              model_id: targetNode.data.model_id || null,
+              position: targetNode.position || { x: 0, y: 0 },
+            });
+            
+            agentId = saveResponse.data?.[0]?.id;
+            
+            if (!agentId) {
+              alert("Agent 저장에 실패했습니다.");
+              return;
+            }
+
+            // 노드 업데이트 (dbId 추가)
+            updateNodeData(targetNode.id, { dbId: agentId, id: agentId });
+            
+          } catch (error) {
+            console.error("Agent 자동 저장 실패:", error);
+            alert("Agent를 저장하지 못해 Tool을 추가할 수 없습니다.");
+            return;
+          }
+        }
+
         const updatedTools = [...(targetNode.data.tools || []), newTool];
         updateNodeData(targetNode.id, { tools: updatedTools });
 
         try {
           await axiosClient.post("/api/v1/agents/tools/save", {
-            agent_id: targetNode.data.id,
+            agent_id: agentId,
             tool: newTool,
           });
           console.log(`${type} 저장 완료`);

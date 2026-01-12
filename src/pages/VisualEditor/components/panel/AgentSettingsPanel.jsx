@@ -94,6 +94,9 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
 
     try {
       const response = await axiosClient.post("/api/v1/agents/save", params);
+      
+      const savedDbId = response.data?.[0]?.id || node.dbId;
+      console.log("Agent saved with dbId:", savedDbId);
 
       if (onNodeUpdate) {
         const updatedNodeData = {
@@ -101,9 +104,11 @@ export default function AgentSettingsPanel({node, fetchSettings, onClose, onNode
           goal,
           backstory,
           model_id: modelId,
-          dbId: response.data?.id || node.dbId,
+          dbId: savedDbId,  
+          id: savedDbId,    
           tools: tools
         };
+        console.log("Updating node with data:", updatedNodeData);
         onNodeUpdate(node.id, updatedNodeData);
       }
 
