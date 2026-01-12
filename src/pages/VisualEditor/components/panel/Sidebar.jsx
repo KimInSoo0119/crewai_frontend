@@ -224,18 +224,6 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
               <MenuItem
                 style={styles.menuItem}
                 draggable
-                onDragStart={(e) => onDragStart(e, "YoutubeChannelTool")}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fff'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fafafa'}
-              >
-                <div style={styles.menuItemContent}>
-                  <span style={styles.menuItemIcon}>📺</span>
-                  <span>YoutubeChannelTool</span>
-                </div>
-              </MenuItem>
-              <MenuItem
-                style={styles.menuItem}
-                draggable
                 onDragStart={(e) => onDragStart(e, "GithubSearchTool")}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fff'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fafafa'}
