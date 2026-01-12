@@ -1,4 +1,4 @@
-export async function poll({ func, interval = 3000, maxAttempts = 10, checkDone }) {
+export async function poll({ func, interval = 3000, maxAttempts = 100, checkDone, onProgress }) {
     let attempts = 0;
 
     return new Promise((resolve, reject) => {
@@ -6,18 +6,27 @@ export async function poll({ func, interval = 3000, maxAttempts = 10, checkDone 
             attempts++;
             try {
                 const result = await func();
+                
+                if (onProgress && typeof onProgress === 'function') {
+                    try {
+                        onProgress(result);
+                    } catch (progressError) {
+                        console.error('onProgress callback error:', progressError);
+                    }
+                }
+                
                 if (checkDone(result)) {
-                    resolve(result)
-                } else if (attempts > maxAttempts) {
-                    reject(new Error("Polling timeout"))
+                    resolve(result);
+                } else if (attempts >= maxAttempts) {
+                    reject(new Error("Polling timeout"));
                 } else {
-                    setTimeout(polling, interval)
+                    setTimeout(polling, interval);
                 }
             } catch (err) {
-                reject (err)
+                reject(err);
             }
         };
 
         polling();
-    })
+    });
 }

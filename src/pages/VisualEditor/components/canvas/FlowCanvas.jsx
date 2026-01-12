@@ -7,6 +7,7 @@ import {
   useEdgesState,
   addEdge,
   reconnectEdge,
+  MarkerType,
 } from "@xyflow/react";
 import AgentNode from "../nodes/AgentNode";
 import TaskNode from "../nodes/TaskNode";
@@ -20,11 +21,23 @@ const nodeTypes = {
   task: TaskNode,
 };
 
+const defaultEdgeOptions = {
+  markerEnd: {
+    type: MarkerType.ArrowClosed,
+    width: 20,
+    height: 20,
+  },
+  style: {
+    strokeWidth: 1.5,
+  },
+};
+
 export default function FlowCanvas({ setFlowData, initialFlow }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialFlow?.nodes || []);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialFlow?.edges || []);
   const [selectedNode, setSelectedNode] = useState(null);
   const [isFetchingSettings, setIsFetchingSettings] = useState(false);
+  const [isDraggingTool, setIsDraggingTool] = useState(false);
   const { screenToFlowPosition } = useReactFlow();
   const initializedRef = useRef(false);
   const edgeReconnectSuccessful = useRef(true);
@@ -37,7 +50,16 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
 
     if (!initializedRef.current && hasInitialData) {
       setNodes(initialFlow.nodes || []);
-      setEdges(initialFlow.edges || []);
+      // 기존 엣지에도 화살표 추가
+      const edgesWithArrows = (initialFlow.edges || []).map(edge => ({
+        ...edge,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: 20,
+          height: 20,
+        },
+      }));
+      setEdges(edgesWithArrows);
       initializedRef.current = true;
     }
   }, [initialFlow, setNodes, setEdges]);
@@ -47,6 +69,43 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
       setFlowData({ nodes, edges });
     }
   }, [nodes, edges, setFlowData]);
+
+  // Tool 드래그 중일 때 Agent 노드 하이라이트
+  useEffect(() => {
+    if (isDraggingTool) {
+      setNodes((nds) =>
+        nds.map((node) => ({
+          ...node,
+          data: {
+            ...node.data,
+            isDropTarget: node.type === "agent",
+          },
+        }))
+      );
+    } else {
+      setNodes((nds) =>
+        nds.map((node) => ({
+          ...node,
+          data: {
+            ...node.data,
+            isDropTarget: false,
+          },
+        }))
+      );
+    }
+  }, [isDraggingTool, setNodes]);
+
+  // 전역 dragend 이벤트 리스너 추가
+  useEffect(() => {
+    const handleDragEnd = () => {
+      setIsDraggingTool(false);
+    };
+
+    window.addEventListener('dragend', handleDragEnd);
+    return () => {
+      window.removeEventListener('dragend', handleDragEnd);
+    };
+  }, []);
 
   const updateNodeData = useCallback((nodeId, newData) => {
     console.log("updateNodeData called with:", { nodeId, newData });
@@ -86,6 +145,22 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
         }))
       );
     }
+    
+    // selectedNode도 업데이트
+    setSelectedNode((prev) => {
+      if (prev && String(prev.id) === String(oldNodeId)) {
+        return {
+          ...prev,
+          id: newNodeId,
+          data: {
+            ...prev.data,
+            ...newData,
+          },
+          dbId: newData.dbId || prev.dbId,
+        };
+      }
+      return prev;
+    });
   }, [setNodes, setEdges]);
 
   const deleteNode = useCallback((nodeId) => {
@@ -157,7 +232,17 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
         return;
       }
 
-      setEdges((eds) => addEdge(params, eds));
+      // 연결할 때 화살표 추가
+      const newEdge = {
+        ...params,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: 20,
+          height: 20,
+        },
+      };
+
+      setEdges((eds) => addEdge(newEdge, eds));
     },
     [nodes, setEdges, validateConnection]
   );
@@ -204,117 +289,144 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
     [setEdges]
   );
 
-  // const onDrop = useCallback(
-  //   (event) => {
-  //     event.preventDefault();
-
-  //     const type = event.dataTransfer.getData("application/reactflow");
-  //     if (!type) return;
-
-  //     const position = screenToFlowPosition({
-  //       x: event.clientX,
-  //       y: event.clientY,
-  //     });
-
-  //     let nodeData = {};
-
-  //     if (type === 'agent') {
-  //       nodeData = {role: "newNode"}
-  //     } else {
-  //       nodeData = {name: "newNode"}
-  //     }
-
-  //     const newNode = {
-  //       id: `tmp-${Date.now()}`,
-  //       type,
-  //       position,
-  //       data: nodeData
-  //     };
-
-  //     setNodes((nds) => nds.concat(newNode));
-  //   },
-  //   [screenToFlowPosition, setNodes]
-  // );
-
   const onDrop = useCallback(
-  async (event) => {
-    event.preventDefault();
+    async (event) => {
+      event.preventDefault();
+      setIsDraggingTool(false);
 
-    const type = event.dataTransfer.getData("application/reactflow");
-    if (!type) return;
+      const type = event.dataTransfer.getData("application/reactflow");
+      if (!type) return;
 
-    const position = screenToFlowPosition({
-      x: event.clientX,
-      y: event.clientY,
-    });
+      const position = screenToFlowPosition({
+        x: event.clientX, 
+        y: event.clientY,
+      });
 
-    const targetNode = nodes.find(
-      (node) =>
-        position.x >= node.position.x &&
-        position.x <= node.position.x + 250 &&
-        position.y >= node.position.y &&
-        position.y <= node.position.y + 120
-    );
+      if (type.endsWith("Tool")) {
+        const targetNode = nodes.find(
+          (node) =>
+            position.x >= node.position.x &&
+            position.x <= node.position.x + 250 &&
+            position.y >= node.position.y &&
+            position.y <= node.position.y + 120
+        );
 
-    if (type === "GmailTool") {
-      if (!targetNode || targetNode.type !== "agent") {
-        alert("GmailTool은 Agent에만 추가할 수 있습니다.");
+        // Agent 노드가 아니면 조용히 무시
+        if (!targetNode || targetNode.type !== "agent") {
+          return;
+        }
+
+        const newTool = { name: type };
+        const alreadyHas = (targetNode.data.tools || []).some(
+          (t) => t.name === type
+        );
+        
+        if (alreadyHas) {
+          alert(`이미 ${type}이 추가된 Agent입니다.`);
+          return;
+        }
+
+        // dbId 확인 (노드의 dbId 또는 data.dbId 모두 체크)
+        let agentId = targetNode.dbId || targetNode.data?.dbId;
+
+        // Agent가 저장되지 않은 경우 먼저 저장
+        if (!agentId) {
+          try {
+            const saveResponse = await axiosClient.post("/api/v1/agents/save", {
+              id: null,
+              project_id: Number(new URLSearchParams(window.location.search).get("project_id")),
+              role: targetNode.data.role || "New Agent",
+              goal: targetNode.data.goal || "",
+              backstory: targetNode.data.backstory || "",
+              model_id: targetNode.data.model_id || null,
+              position: targetNode.position || { x: 0, y: 0 },
+            });
+            
+            agentId = saveResponse.data?.[0]?.id;
+            
+            if (!agentId) {
+              alert("Agent 저장에 실패했습니다.");
+              return;
+            }
+
+            // 노드 업데이트 (dbId 추가)
+            updateNodeData(targetNode.id, { dbId: agentId, id: agentId });
+            
+          } catch (error) {
+            console.error("Agent 자동 저장 실패:", error);
+            alert("Agent를 저장하지 못해 Tool을 추가할 수 없습니다.");
+            return;
+          }
+        }
+
+        const updatedTools = [...(targetNode.data.tools || []), newTool];
+        updateNodeData(targetNode.id, { tools: updatedTools });
+
+        try {
+          await axiosClient.post("/api/v1/agents/tools/save", {
+            agent_id: agentId,
+            tool: newTool,
+          });
+          console.log(`${type} 저장 완료`);
+        } catch (error) {
+          console.error("Tool 저장 실패:", error);
+          alert("서버 저장 실패!");
+        }
+
         return;
       }
 
-      const newTool = { name: "GmailTool", config: {} };
-      const alreadyHas = (targetNode.data.tools || []).some(
-        (t) => t.name === "GmailTool"
-      );
-      if (alreadyHas) {
-        alert("이미 GmailTool이 추가된 Agent입니다.");
-        return;
+      let nodeData = {};
+      if (type === "agent") {
+        nodeData = { role: "newNode", tools: [] };
+      } else {
+        nodeData = { name: "newNode" };
       }
 
-      const updatedTools = [...(targetNode.data.tools || []), newTool];
-      updateNodeData(targetNode.id, { tools: updatedTools });
+      const newNode = {
+        id: `tmp-${Date.now()}`,
+        type,
+        position,
+        data: nodeData,
+      };
 
-      try {
-        await axiosClient.post("/api/v1/agents/tools/save", {
-          agent_id: targetNode.data.id, 
-          tool: newTool,
-        });
-      } catch (error) {
-        console.error("Tool 저장 실패:", error);
-        alert("서버 저장 실패!");
-      }
-
-      return;
-    }
-
-    let nodeData = {};
-    if (type === "agent") {
-      nodeData = { role: "newNode", tools: [] };
-    } else {
-      nodeData = { name: "newNode" };
-    }
-
-    const newNode = {
-      id: `tmp-${Date.now()}`,
-      type,
-      position,
-      data: nodeData,
-    };
-
-    setNodes((nds) => nds.concat(newNode));
-  },
-  [nodes, screenToFlowPosition, setNodes, updateNodeData]
-);
-
+      setNodes((nds) => nds.concat(newNode));
+    },
+    [nodes, screenToFlowPosition, setNodes, updateNodeData]
+  );
 
   const onDragOver = (event) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
   };
 
+  const onDragEnter = (event) => {
+    event.preventDefault();
+    const hasData = event.dataTransfer.types.includes("application/reactflow");
+    if (hasData) {
+      setIsDraggingTool(true);
+    }
+  };
+
+  const onDragLeave = (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX;
+    const y = event.clientY;
+    
+    if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
+      setIsDraggingTool(false);
+    }
+  };
+
   return (
     <div style={styles.container}>
-      <div style={{ flex: 1 }} onDrop={onDrop} onDragOver={onDragOver}>
+      <div 
+        style={{ flex: 1 }} 
+        onDrop={onDrop} 
+        onDragOver={onDragOver}
+        onDragEnter={onDragEnter}
+        onDragLeave={onDragLeave}
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -325,6 +437,7 @@ export default function FlowCanvas({ setFlowData, initialFlow }) {
           onReconnectStart={onReconnectStart}
           onReconnectEnd={onReconnectEnd}
           nodeTypes={nodeTypes}
+          defaultEdgeOptions={defaultEdgeOptions}
           onNodeClick={(event, node) => openSettings(node)}
           onNodesDelete={(deletedNodes) => {
             deletedNodes.forEach((node) => deleteNode(node.id));

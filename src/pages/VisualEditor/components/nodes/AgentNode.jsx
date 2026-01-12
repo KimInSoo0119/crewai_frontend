@@ -8,9 +8,24 @@ export default function AgentNode({ data, id }) {
     deleteElements({ nodes: [{ id }] });
   };
 
+  const containerStyle = {
+    ...styles.container,
+    ...(data.isDropTarget && styles.dropTargetContainer),
+  };
+
+  const headerBarStyle = {
+    ...styles.headerBar,
+    ...(data.isDropTarget && styles.dropTargetHeader),
+  };
+
   return (
-    <div style={styles.container}>
-      <div style={styles.headerBar}></div>
+    <div style={containerStyle}>
+      {data.isDropTarget && (
+        <div style={styles.dropIndicator}>
+          <span style={styles.dropText}>Tool을 여기에 놓으세요</span>
+        </div>
+      )}
+      <div style={headerBarStyle}></div>
       <button
         onClick={handleDelete}
         style={styles.deleteButton}
@@ -50,6 +65,18 @@ export default function AgentNode({ data, id }) {
               </span>
             </div>
           )}
+          {data.tools && data.tools.length > 0 && (
+            <div style={styles.info}>
+              <span style={styles.label}>Tools</span>
+              <div style={styles.toolsContainer}>
+                {data.tools.map((tool, index) => (
+                  <span key={index} style={styles.toolBadge}>
+                    {tool.name || tool}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
       
@@ -73,12 +100,47 @@ const styles = {
     fontFamily: "system-ui, -apple-system, sans-serif",
     position: "relative",
     overflow: "hidden",
-    transition: "all 0.2s ease",
+    transition: "all 0.3s ease",
+  },
+  dropTargetContainer: {
+    border: "3px dashed #4CAF50",
+    background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)",
+    boxShadow: "0 4px 20px rgba(76, 175, 80, 0.3), 0 0 0 4px rgba(76, 175, 80, 0.1)",
+    transform: "scale(1.05)",
+  },
+  dropIndicator: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "8px",
+    zIndex: 5,
+    pointerEvents: "none",
+    animation: "pulse 1.5s ease-in-out infinite",
+  },
+  dropText: {
+    fontSize: "0.75rem",
+    fontWeight: "600",
+    color: "#16a34a",
+    background: "rgba(255, 255, 255, 0.95)",
+    padding: "4px 12px",
+    borderRadius: "12px",
+    border: "1.5px solid #4CAF50",
+    boxShadow: "0 2px 8px rgba(76, 175, 80, 0.2)",
+    whiteSpace: "nowrap",
   },
   headerBar: {
     height: "4px",
     background: "linear-gradient(90deg, #ef4444 0%, #dc2626 100%)",
     width: "100%",
+    transition: "all 0.3s ease",
+  },
+  dropTargetHeader: {
+    background: "linear-gradient(90deg, #4CAF50 0%, #16a34a 100%)",
+    height: "6px",
   },
   deleteButton: {
     position: "absolute",
@@ -154,6 +216,23 @@ const styles = {
     color: "#6b7280",
     lineHeight: "1.4",
     wordBreak: "break-word",
+  },
+  toolsContainer: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "4px",
+    marginTop: "2px",
+  },
+  toolBadge: {
+    fontSize: "0.625rem",
+    padding: "2px 6px",
+    background: "linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)",
+    color: "#991b1b",
+    borderRadius: "4px",
+    border: "1px solid #fca5a5",
+    fontWeight: "500",
+    whiteSpace: "nowrap",
+    lineHeight: "1.2",
   },
   handle: {
     width: "8px",

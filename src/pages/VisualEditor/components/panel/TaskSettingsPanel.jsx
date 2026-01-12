@@ -46,6 +46,7 @@ export default function TaskSettingsPanel({node, fetchSettings, onClose, onNodeU
       name,
       description,
       expected_output: expectedOutput,
+      position: node.position || { x: 0, y: 0 },
     };
 
     try {
@@ -272,7 +273,7 @@ const styles = {
   },
   textarea: {
     width: "100%",
-    minHeight: 210,
+    minHeight: 180,
     padding: "8px 11px",
     borderRadius: "5px",
     border: "1px solid #e5e7eb",

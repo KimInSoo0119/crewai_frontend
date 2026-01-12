@@ -22,7 +22,15 @@ function Spinner() {
   );
 }
 
-export default function ExecutionPopup({isOpen, onClose, event=[], workflow=[], finalOutput=""}) {
+export default function ExecutionPopup({
+  isOpen, 
+  onClose, 
+  event=[], 
+  workflow=[], 
+  finalOutput="",
+  completedTasks=[], 
+  isExecuting=false
+}) {
   const [expandedAgents, setExpandedAgents] = useState({});
 
   const toggleAgent = (agentId) => {
@@ -31,6 +39,19 @@ export default function ExecutionPopup({isOpen, onClose, event=[], workflow=[], 
       [agentId]: !prev[agentId]
     }));
   };
+
+  const displayTasks = isExecuting ? completedTasks : workflow;
+  const completedTaskIds = new Set(displayTasks.map(t => String(t.task_id)));
+  const filteredEvent = event.map(agent => {
+    const completedAgentTasks = (agent.tasks || []).filter(task => 
+      completedTaskIds.has(String(task.id))
+    );
+    
+    return {
+      ...agent,
+      tasks: completedAgentTasks
+    };
+  }).filter(agent => agent.tasks.length > 0); 
 
   return (
     <Modal
@@ -41,7 +62,9 @@ export default function ExecutionPopup({isOpen, onClose, event=[], workflow=[], 
     >
       <div style={styles.container}>
         <div style={styles.header}>
-          <h3 style={styles.headerTitle}>Execution Results</h3>
+          <h3 style={styles.headerTitle}>
+            Execution Results
+          </h3>
           <button style={styles.closeBtn} onClick={onClose}>×</button>
         </div>
 
@@ -49,11 +72,15 @@ export default function ExecutionPopup({isOpen, onClose, event=[], workflow=[], 
           <div style={styles.leftPanel}>
             <div style={styles.panelHeader}>
               <h4 style={styles.panelTitle}>Events</h4>
-              <div style={styles.panelSubtitle}>실행 흐름</div>
+              <div style={styles.panelSubtitle}>
+                {isExecuting 
+                  ? `진행 중 (${completedTasks.length} 완료)` 
+                  : '실행 흐름'}
+              </div>
             </div>
             <div style={styles.hierarchyList}>
-              {event && event.length > 0 ? (
-                event.map((agent, idx) => (
+              {filteredEvent && filteredEvent.length > 0 ? (
+                filteredEvent.map((agent, idx) => (
                   <div key={agent.agent_id || idx} style={styles.agentGroup}>
                     <div 
                       style={styles.agentHeader}
@@ -70,7 +97,13 @@ export default function ExecutionPopup({isOpen, onClose, event=[], workflow=[], 
                       <div style={styles.taskList}>
                         {agent.tasks && agent.tasks.length > 0 ? (
                           agent.tasks.map((task, taskIdx) => (
-                            <div key={task.id || taskIdx} style={styles.taskItem}>
+                            <div 
+                              key={task.id || taskIdx} 
+                              style={{
+                                ...styles.taskItem,
+                                animation: isExecuting ? 'fadeIn 0.5s ease-in' : 'none'
+                              }}
+                            >
                               <div style={styles.taskBullet}>●</div>
                               <div style={styles.taskDescription}>
                                 {task.description || `Task ${taskIdx + 1}`}
@@ -85,7 +118,20 @@ export default function ExecutionPopup({isOpen, onClose, event=[], workflow=[], 
                   </div>
                 ))
               ) : (
-                <p style={styles.emptyMessage}>이벤트 데이터가 없습니다</p>
+                <div style={styles.emptyMessage}>
+                  {isExecuting ? (
+                    <>
+                      <div style={styles.emptySpinner}>
+                        <Spinner />
+                      </div>
+                      <p style={{marginTop: '16px', color: '#666', fontSize: '13px'}}>
+                        첫 번째 Task 실행 중...
+                      </p>
+                    </>
+                  ) : (
+                    <p>이벤트 데이터가 없습니다</p>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -93,24 +139,44 @@ export default function ExecutionPopup({isOpen, onClose, event=[], workflow=[], 
           <div style={styles.rightPanel}>
             <div style={styles.panelHeader}>
               <h4 style={styles.panelTitle}>Result</h4>
-              <div style={styles.panelSubtitle}>실행 결과</div>
+              <div style={styles.panelSubtitle}>
+                {isExecuting 
+                  ? `실시간 결과 (${displayTasks.length}개 완료)` 
+                  : '실행 결과'}
+              </div>
             </div>
-            {workflow.length === 0 ? (
+            
+            {displayTasks.length === 0 ? (
               <div style={styles.loadingContainer}>
                 <Spinner />
-                <p style={styles.loadingMessage}>답변 생성중...</p>
+                <p style={styles.loadingMessage}>
+                  {isExecuting ? '첫 번째 Task 실행 중...' : '답변 생성 중...'}
+                </p>
               </div>
             ) : (
               <>
-                {workflow.map(task => (
-                  <div key={task.id} style={styles.taskBox}>
+                {displayTasks.map((task, index) => (
+                  <div 
+                    key={task.id || task.task_id || index} 
+                    style={{
+                      ...styles.taskBox,
+                      animation: isExecuting ? 'fadeIn 0.5s ease-in' : 'none'
+                    }}
+                  >
+                    <div style={styles.taskHeader}>
+                      <span style={styles.taskNumber}>Task {index + 1}</span>
+                      <span style={styles.taskName}>{task.name}</span>
+                    </div>
+
                     <div style={styles.section}>
                       <h4 style={styles.sectionTitle}>
                         <span style={styles.sectionIcon}>📋</span>
                         Description
                       </h4>
                       <div style={styles.sectionContent}>
-                        <ReactMarkdown>{task.output.description || "설명이 없습니다."}</ReactMarkdown>
+                        <ReactMarkdown>
+                          {task.output?.summary || task.summary || "설명이 없습니다."}
+                        </ReactMarkdown>
                       </div>
                     </div>
 
@@ -120,13 +186,15 @@ export default function ExecutionPopup({isOpen, onClose, event=[], workflow=[], 
                         Output
                       </h4>
                       <div style={styles.markdownContent}>
-                        <ReactMarkdown>{task.output.raw || "출력이 없습니다."}</ReactMarkdown>
+                        <ReactMarkdown>
+                          {task.output?.raw || task.output || "출력이 없습니다."}
+                        </ReactMarkdown>
                       </div>
                     </div>
                   </div>
                 ))}
                 
-                {finalOutput && (
+                {!isExecuting && finalOutput && (
                   <div style={styles.finalOutputBox}>
                     <h4 style={styles.finalOutputTitle}>
                       Final Output
@@ -134,6 +202,13 @@ export default function ExecutionPopup({isOpen, onClose, event=[], workflow=[], 
                     <div style={styles.markdownContent}>
                       <ReactMarkdown>{finalOutput}</ReactMarkdown>
                     </div>
+                  </div>
+                )}
+
+                {isExecuting && (
+                  <div style={styles.executingIndicator}>
+                    <Spinner />
+                    <p style={styles.executingText}>다음 Task 실행 중...</p>
                   </div>
                 )}
               </>
@@ -210,6 +285,8 @@ const styles = {
     borderRight: "1px solid #e8e8e8",
     overflowY: "auto",
     backgroundColor: "#f8f9fa",
+    display: "flex",
+    flexDirection: "column",
   },
   rightPanel: {
     flex: 1,
@@ -239,6 +316,9 @@ const styles = {
   hierarchyList: {
     fontSize: "14px",
     padding: "16px",
+    display: "flex",
+    flexDirection: "column",
+    flex: 1,
   },
   agentGroup: {
     marginBottom: "12px",
@@ -311,10 +391,19 @@ const styles = {
     fontStyle: "italic",
   },
   emptyMessage: {
-    padding: "40px 20px",
+    padding: "20px 20px 40px 20px",
     textAlign: "center",
     color: "#999",
     fontSize: "14px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+  },
+  emptySpinner: {
+    width: "40px",
+    height: "40px",
   },
   loadingContainer: {
     display: "flex",
@@ -322,11 +411,11 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     padding: "60px 20px",
+    minHeight: "400px",
   },
   spinner: {
     width: "40px",
     height: "40px",
-    marginTop: "150px",
     border: "4px solid #f3f3f3",
     borderTop: "4px solid #333",
     borderRadius: "50%",
@@ -335,6 +424,31 @@ const styles = {
     marginTop: "20px",
     color: "#666",
     fontSize: "14px",
+  },
+  taskHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    marginBottom: "16px",
+    paddingBottom: "12px",
+    borderBottom: "2px solid #e8e8e8",
+  },
+  taskNumber: {
+    fontSize: "12px",
+    fontWeight: "700",
+    color: "#667eea",
+    backgroundColor: "#f0f3ff",
+    padding: "4px 10px",
+    borderRadius: "6px",
+  },
+  taskName: {
+    flex: 1,
+    fontSize: "15px",
+    fontWeight: "600",
+    color: "#2d3748",
+  },
+  completeIcon: {
+    fontSize: "18px",
   },
   taskBox: {
     margin: "16px 20px",
@@ -394,5 +508,22 @@ const styles = {
     gap: "8px",
     paddingBottom: "10px",
     borderBottom: "2px solid #667eea",
+  },
+  executingIndicator: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "40px 20px",
+    margin: "20px",
+    backgroundColor: "#f0f3ff",
+    borderRadius: "10px",
+    border: "2px dashed #667eea",
+  },
+  executingText: {
+    marginTop: "16px",
+    color: "#667eea",
+    fontSize: "14px",
+    fontWeight: "600",
   },
 };
