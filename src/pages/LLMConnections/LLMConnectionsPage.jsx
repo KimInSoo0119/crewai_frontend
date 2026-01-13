@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { v4 as uuidv4 } from "uuid";
 import axiosClient from "../../api/axiosClient";
 
 export default function LLMConnectionsPage() {
@@ -7,8 +8,8 @@ export default function LLMConnectionsPage() {
   const [providerOptions, setProviderOptions] = useState([]);
   const [llmList, setLlmList] = useState([]);
   const [envVars, setEnvVars] = useState([
-    { id: crypto.randomUUID(), key: "OPENAI_API_KEY", value: "" },
-    { id: crypto.randomUUID(), key: "OPENAI_API_BASE", value: "" },
+    { id: uuidv4(), key: "OPENAI_API_KEY", value: "" },
+    { id: uuidv4(), key: "OPENAI_API_BASE", value: "" },
   ]);
 
   useEffect(() => {
@@ -38,7 +39,7 @@ export default function LLMConnectionsPage() {
   };
 
   const addVariable = () => {
-    setEnvVars([...envVars, { id: crypto.randomUUID(), key: "", value: "" }]);
+    setEnvVars([...envVars, { id: uuidv4(), key: "", value: "" }]);
   };
 
   const updateEnvVar = (id, field, value) => {
@@ -73,8 +74,8 @@ export default function LLMConnectionsPage() {
       setConnectionName("");
       setProvider("");
       setEnvVars([
-        { id: crypto.randomUUID(), key: "OPENAI_API_KEY", value: "" },
-        { id: crypto.randomUUID(), key: "OPENAI_API_BASE", value: "" },
+        { id: uuidv4(), key: "OPENAI_API_KEY", value: "" },
+        { id: uuidv4(), key: "OPENAI_API_BASE", value: "" },
       ]);
 
       alert("Connection added successfully!");

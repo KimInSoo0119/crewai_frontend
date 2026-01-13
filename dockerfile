@@ -7,7 +7,6 @@ RUN npm ci
 
 COPY . .
 
-# ARG로 받아서 ENV로 설정
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 
