@@ -28,6 +28,11 @@ export default function CreateProjectPopup({ isOpen, onClose, onCreate }) {
           placeholder="Project title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && title.trim()) {
+              handleCreate();
+            }
+          }}
           style={styles.input}
         />
       </div>
