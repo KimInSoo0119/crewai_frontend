@@ -39,9 +39,11 @@ export default function ExecutionPopup({
       [agentId]: !prev[agentId]
     }));
   };
-
+  
   const displayTasks = isExecuting ? completedTasks : workflow;
   const completedTaskIds = new Set(displayTasks.map(t => String(t.task_id)));
+  
+  // agent_hierarchy의 tasks 배열에서 execution_order 기준으로 매칭
   const filteredEvent = event.map(agent => {
     const completedAgentTasks = (agent.tasks || []).filter(task => 
       completedTaskIds.has(String(task.id))
@@ -51,7 +53,7 @@ export default function ExecutionPopup({
       ...agent,
       tasks: completedAgentTasks
     };
-  }).filter(agent => agent.tasks.length > 0); 
+  }).filter(agent => agent.tasks.length > 0);
 
   return (
     <Modal

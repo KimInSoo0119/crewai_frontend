@@ -99,43 +99,71 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
       console.log("Execution ID:", executionId);
       
       const finalRes = await poll({
-        func: () => axiosClient.get(`/api/v1/crew/flow/status/${executionId}`),
-        interval: 3000,
-        maxAttempts: 100,
+        func: () => axiosClient.get(`/api/v1/tasks/executions/${executionId}`),
+        interval: 3000, 
+        maxAttempts: 150,
         checkDone: (res) => {
           console.log("Poll response:", res.data);
           return res.data?.status === true;
         },
         onProgress: (res) => {
-          const statusData = res.data;
-          console.log("Progress update:", statusData);
+          const executionData = res.data;
+          console.log("Progress update:", executionData);
           
-          if (statusData?.result) {
-            // workflow 업데이트
-            if (statusData.result.workflow) {
-              const workflows = statusData.result.workflow;
-              console.log("Updating completed tasks:", workflows);
-              setCompletedTasks([...workflows]);
-            }
+          if (!executionData) return;
+          
+          // agent_hierarchy 업데이트
+          if (executionData.result?.agent_hierarchy) {
+            console.log("Updating agent hierarchy:", executionData.result.agent_hierarchy);
+            setAgentHierarchy([...executionData.result.agent_hierarchy]);
+          }
+          
+          // task_executions 업데이트
+          if (executionData.task_executions) {
+            console.log("Updating task executions:", executionData.task_executions);
             
-            // agent_hierarchy 업데이트
-            if (statusData.result.agent_hierarchy) {
-              console.log("Updating agent hierarchy:", statusData.result.agent_hierarchy);
-              setAgentHierarchy([...statusData.result.agent_hierarchy]);
-            }
+            const formattedTasks = executionData.task_executions.map(te => ({
+              id: te.id,
+              task_id: te.task_id,
+              name: te.task_name,
+              output: te.task_output,
+              execution_order: te.execution_order
+            }));
+            
+            setCompletedTasks(formattedTasks);
           }
         }
       });
 
-      const finalResult = finalRes.data?.result;
+      const executionData = finalRes.data;
       
-      if (!finalResult) {
-        console.error("No result in final response:", finalRes.data);
+      if (!executionData) {
+        console.error("No data in final response:", finalRes.data);
         throw new Error("결과 데이터를 받지 못했습니다.");
       }
-      setResultData(finalResult);
-      setCompletedTasks(finalResult.workflow || []);
-      setAgentHierarchy(finalResult.agent_hierarchy || []); 
+      
+      console.log("Final execution data:", executionData);
+      
+      // 최종 결과 설정
+      setResultData({
+        final_output: executionData.result?.final_output || "",
+        agent_hierarchy: executionData.result?.agent_hierarchy || []
+      });
+      setAgentHierarchy(executionData.result?.agent_hierarchy || []);
+      
+      // 최종 task_executions 설정
+      if (executionData.task_executions) {
+        const formattedTasks = executionData.task_executions.map(te => ({
+          id: te.id,
+          task_id: te.task_id,
+          name: te.task_name,
+          output: te.task_output,
+          execution_order: te.execution_order
+        }));
+        
+        setCompletedTasks(formattedTasks);
+      }
+      
       setIsExecuting(false);
       
       console.log("Result data set successfully");
@@ -284,7 +312,7 @@ export default function Sidebar({ collapsed, onToggle, flowData }) {
         isOpen={isPopupOpen}
         onClose={handleClose}
         event={isExecuting ? agentHierarchy : (resultData?.agent_hierarchy || agentHierarchy)}
-        workflow={resultData?.workflow}
+        workflow={completedTasks}
         finalOutput={resultData?.final_output}
         completedTasks={completedTasks}
         isExecuting={isExecuting}
